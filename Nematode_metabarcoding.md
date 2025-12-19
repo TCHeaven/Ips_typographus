@@ -74,7 +74,7 @@ done
 
 ## Read Quality Control and ASV Inference <a name="3"></a>
 
-#### FastQC  <a name="7"></a>
+### FastQC  <a name="7"></a>
 The raw sequence reads were subjected to a quality control check using FastQC.
 ```bash
 screen -S nematode
@@ -101,7 +101,7 @@ for ReadDir in $(ls -d /data/users/theaven/nematode_project/raw_data/*S/*); do
 	fi
 done
 ```
-#### Cutadapt  <a name="8"></a>
+### Cutadapt  <a name="8"></a>
 Primers were removed from the reads where present using Cutadapt.
 
 NOTE:The reads are a mix of paired and single end samples.
@@ -155,7 +155,7 @@ for ReadDir in $(ls -d /data/users/theaven/nematode_project/raw_data/18S/*); do
 	fi
 done
 ```
-#### Fastp  <a name="9"></a>
+### Fastp  <a name="9"></a>
 
 Reads were trimmed with Fastp to remove adapters, reads/pairs shorter than 100bp or with >40% of bases below phred 20 were discarded.
 ```bash
@@ -182,7 +182,7 @@ for ReadDir in $(ls -d /data/users/theaven/nematode_project/qc_data/*S/*/CutAdap
 	fi
 done
 ```
-#### Bowtie2  <a name="10"></a>
+### Bowtie2  <a name="10"></a>
 
 Reads were aligned to the reference <i>I. typographus</i> genome in order to exclude reads from the host.
 ```bash
@@ -221,7 +221,7 @@ done
 rm -r /data/users/theaven/nematode_project/qc_data/*S/*/CutAdapt
 rm /data/users/theaven/nematode_project/qc_data/*S/*/Fastp/*.fastq.gz
 ```
-#### DADA2  <a name="11"></a>
+### DADA2  <a name="11"></a>
 The denoiser tool DADA2 was run to model and remove error patterns from the Illumina data: read ends where quality drops were trimmed, reads with high expected error (EE), or above a max EE threshold, or with any ambiguous bases (N) were discarded. DADA2’s removeBimeraDenovo function was also used to remove chimera from the ASV table. For paired reads DADA2 also merges forward and reverse reads in the overlapping region. When F and R disagree, the merge algorithm uses quality scores to pick the most likely base or discards the read. The output of DADA2 is an Alternative Sequence Variant (ASV) table as well as filtered denoised read fastq files.
 
 DADA2 is an R package, 18S and 28S, paired and single end reads must be run seperately. The relavent files were downloaded:
@@ -240,7 +240,7 @@ done
 ```
 "/data/users/theaven/download_18122025" was subseqeuntly downloaded to "C:\Users\THeaven\OneDrive - Scientific Network South Tyrol\R"
 
-<u>Plot reads and select appropriate truncation lengths</u> 
+<b>Plot reads and select appropriate truncation lengths</b> 
 
 DADA2 quality profile plots summarise per-cycle base quality scores across reads. The solid orange line is median quality score at each base position, the solid turquoise line is mean quality score at each position, orange dashed lines show 10th and 90th percentiles. Q20 = ~1% error rate. Q30 = ~ 0.1% error rate.
 
@@ -295,7 +295,7 @@ The mean (turquoise) is noticably lower than the median (orange), this indicates
 
 ![Representative DADA2 quality profile plot](figures/28S_D2A_RV082_unaligned_vs_GCA_016097725.1_CZU_Ityp_1.0_genomic.png)
 
-<u>Collect inputs to run DADA2:</u>
+<b>Collect inputs to run DADA2:</b>
 ```R
 single_18S <- list.files(path = "download_18122025/18S/single", full.names = TRUE, recursive = TRUE)
 single_28S <- list.files(path = "download_18122025/28S/single", full.names = TRUE, recursive = TRUE)
@@ -330,7 +330,7 @@ paired_28S_lookup_table <- data.frame(
   stringsAsFactors = FALSE
 )
 ```
-<u>Run DADA2 for the different datasets</u>
+**Run DADA2 for the different datasets**
 
 Run DADA2 for 18S single end reads
 ```R
