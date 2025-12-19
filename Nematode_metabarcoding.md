@@ -240,13 +240,11 @@ done
 ```
 "/data/users/theaven/download_18122025" was subseqeuntly downloaded to "C:\Users\THeaven\OneDrive - Scientific Network South Tyrol\R"
 
-Plot reads and select appropriate truncation lengths. 
+<u>Plot reads and select appropriate truncation lengths</u> 
 
 DADA2 quality profile plots summarise per-cycle base quality scores across reads. The solid orange line is median quality score at each base position, the solid turquoise line is mean quality score at each position, orange dashed lines show 10th and 90th percentiles. Q20 = ~1% error rate. Q30 = ~ 0.1% error rate.
 
 DADA2 filter settings will truncate reads, a parameter is required below which length the read is discarded entirely. Plots of read quality help to determine a reasonable cuttoff, ie. before major dropoff in quality of many reads, or the median read quality is < Q25-30, or the lower percentile < Q20, mean and median should also be similar. However, shorter, more permissive lengths are prefered as other filter settings should act as a safety net to remove problem reads. However, for paired reads the truncated forward and reverse reads must still be long enough to overlap (at least 20bp) given the amplicon size or the reads cannot be merged.
-
-![Representative DADA2 quality profile plot](figures/28S_D2A_RV082_unaligned_vs_GCA_016097725.1_CZU_Ityp_1.0_genomic.png)
 ```R
 if (!require("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
@@ -295,7 +293,9 @@ plotQualityProfile("download_18122025/28S/paired/Ab1_10/28S_Ab1_10_unaligned_vs_
 ```
 The mean (turquoise) is noticably lower than the median (orange), this indicates that the quality distribution is skewed: many reads are decent (keeping the median high), but a subset of reads are really bad (dragging the mean down). maxEE is the primary setting to target these problem reads.
 
-Collect inputs:
+![Representative DADA2 quality profile plot](figures/28S_D2A_RV082_unaligned_vs_GCA_016097725.1_CZU_Ityp_1.0_genomic.png)
+
+<u>Collect inputs to run DADA2:</u>
 ```R
 single_18S <- list.files(path = "download_18122025/18S/single", full.names = TRUE, recursive = TRUE)
 single_28S <- list.files(path = "download_18122025/28S/single", full.names = TRUE, recursive = TRUE)
@@ -330,6 +330,8 @@ paired_28S_lookup_table <- data.frame(
   stringsAsFactors = FALSE
 )
 ```
+<u>Run DADA2 for the different datasets</u>
+
 Run DADA2 for 18S single end reads
 ```R
 #Parameters
