@@ -56,6 +56,13 @@ done
 ### FastQC  <a name="7"></a>
 The raw sequence reads were subjected to a quality control check using FastQC.
 ```bash
+for ReadDir in /data/users/theaven/nematode_project/raw_data/*S/*; do
+    ID=$(basename "$ReadDir")
+    echo "$ID"
+    zcat "$ReadDir"/*1.fastq.gz | wc -l | awk '{print $1/4}'
+    zcat "$ReadDir"/*2.fastq.gz | wc -l | awk '{print $1/4}'
+done
+
 screen -S nematode
 module load anaconda3
 for ReadDir in $(ls -d /data/users/theaven/nematode_project/raw_data/*S/*); do
@@ -115,6 +122,7 @@ for ReadDir in $(ls -d /data/users/theaven/nematode_project/raw_data/18S/*); do
 	ID=$(echo "$ReadDir" | cut -d '/' -f7,8 | sed 's@/@_@g')
     Reads=("$ReadDir"/*.fastq.gz)
 	OutDir="$(echo "$ReadDir" | sed 's@raw_data@qc_data@g')/"$Task""
+	echo "$OutDir"
 	Forward_Primer=GCAAGTCTGGTGCCAGCAGC
 	Reverse_Primer=CCGTGTTGAGTCAAATTAAG
 	ExpectedOutput="$OutDir"/$(basename "${Reads[0]}" | sed 's@.fastq.gz@.trim.fastq.gz@g')
@@ -132,6 +140,13 @@ for ReadDir in $(ls -d /data/users/theaven/nematode_project/raw_data/18S/*); do
 	else
 		echo "For $ID found: $ExpectedOutput" 
 	fi
+done
+
+for ReadDir in /data/users/theaven/nematode_project/qc_data/*/*/CutAdapt; do
+    ID=$(echo "$ReadDir" | cut -d '/' -f7,8 | sed 's@/@_@g')
+    echo "$ID" >> post_cutadapt_count.txt
+    zcat "$ReadDir"/*1.trim.fastq.gz | wc -l | awk '{print $1/4}' >> post_cutadapt_count.txt
+    zcat "$ReadDir"/*2.trim.fastq.gz | wc -l | awk '{print $1/4}' >> post_cutadapt_count.txt
 done
 ```
 ### Fastp  <a name="9"></a>
@@ -160,6 +175,15 @@ for ReadDir in $(ls -d /data/users/theaven/nematode_project/qc_data/*S/*/CutAdap
 		echo "For $ID found: $ExpectedOutput" 
 	fi
 done
+
+for ReadDir in /data/users/theaven/nematode_project/qc_data/*/*/Fastp; do
+    ID=$(echo "$ReadDir" | cut -d '/' -f7,8 | sed 's@/@_@g')
+    echo "$ID" >> post_fastp_count.txt
+    zcat "$ReadDir"/*1.trim.trimmed.fastq.gz | wc -l | awk '{print $1/4}' >> post_fastp_count.txt
+    zcat "$ReadDir"/*2.trim.trimmed.fastq.gz | wc -l | awk '{print $1/4}' >> post_fastp_count.txt
+done
+
+#For 28S samples 10s of thousands of reads are retained after fastp, for 18S there are some samples where read count is reduced below 10,000 (still >3,000). I will continue with fastp filtered reads as this step was performed by V. Rau.
 ```
 ### Bowtie2  <a name="10"></a>
 
@@ -1812,6 +1836,11 @@ Sample=$(basename $file | cut -d '_' -f1,2,3)
 sed "/^>/ s/$/|$Sample/" $file >> merged_Maja_reads.fasta
 done
 
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/substring_match.py \
+  --short asvs/ASV_18S/ASVs.fasta \
+  --long merged_Maja_reads.fasta \
+  -o ASV18S_in_merged.tsv
+
 grep -c '^>' merged_Maja_reads.fasta #3022183
 
 #Get unique reads
@@ -1839,6 +1868,33 @@ awk -F'\t' 'NR>1{seen[$3 SUBSEP $1]=1} END{for(k in seen){split(k,a,SUBSEP); n[a
 #5       30
 
 awk -F'\t' -v OFS='\t' 'NR==1{next}{long=$3;asv=$1;key=long SUBSEP asv;if(!(seen[key]++))list[long]=list[long](list[long]?";":"")asv}END{for(long in list){n=split(list[long],a,";");if(n>1)print long,n,list[long]}}' ASV18S_in_merged_uniques.tsv | sort -k2,2nr
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #Load in Maja's BOLD annotations
 module load anaconda3
