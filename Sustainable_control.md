@@ -23,7 +23,7 @@ module load samtools/1.19.2-gcc-13.3.0-a2yhwkt
 awk -v GENOME="/home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna" -f /home/clusterusers/theaven/git_repos/Scripts/unibz/primersearch_to_faidx.awk /home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna.fai primer_results.txt > extract_cmds.sh
 bash extract_cmds.sh > amplicons.fasta
 
-#Fungal ITS sequences were downloaded from UNITE (DOI: 10.15156/BIO/3301229) [Accessed 1800202026], to this .fasta I will add the Ips sequences which have been predicted to be amplified by our ITS1/4 primmers
+#Fungal ITS sequences were downloaded from UNITE (DOI: https://doi.org/10.15156/BIO/3301229) [Accessed 1800202026; https://unite.ut.ee/repository.php], to this .fasta I will add the Ips sequences which have been predicted to be amplified by our ITS1/4 primmers
 echo JADDUH010000185.1 >> temp_id.txt
 echo JADDUH010000200.1 >> temp_id.txt
 echo JADDUH010000208.1 >> temp_id.txt
@@ -363,7 +363,7 @@ grep -A 12 '=== Summary ===' $file >> /data/users/theaven/Ips_jam_project/qc_dat
 echo -e '\n\n' >> /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/cutadapt_report.txt
 done
 
-#62.4% of reads dropped, 8.18% because of no primer sequence in the reads, 0.29% too long, 51.73% tool long on average
+#62.4% of reads dropped, 8.18% because of no primer sequence in the reads, 0.29% too long, 51.73% tool short on average
 
 seqkit stats /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/*.fastq
 ```
@@ -446,7 +446,7 @@ grep -A 12 '=== Summary ===' $file >> /data/users/theaven/Ips_jam_project/qc_dat
 echo -e '\n\n' >> /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/cutadapt_report.txt
 done
 
-#70.4% of reads dropped, 1.65% because of no primer sequence in the reads, 7.26% too long, 59.9% tool long on average
+#70.4% of reads dropped, 1.65% because of no primer sequence in the reads, 7.26% too long, 59.9% tool short on average
 
 seqkit stats /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/*.fastq
 ```
@@ -993,10 +993,46 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS-trim); do
   fi
 done
 ```
+```bash
+#plot stacked barplots
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+
+for file in $(ls /data/users/theaven/Ips_jam_project/wf-16s/out/*-trim/*/abundance_table_genus.tsv); do
+  taxa_level=Family
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/plot_epi2me_abundance2.py \
+  -i "$file" \
+  -n 9 \
+  -o $(dirname "$file")/stacked-barplot_"$taxa_level".svg \
+  --tax_level "$taxa_level" \
+  --sample_order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
+done
+
+# -------------------------
+# Plot
+# -------------------------
+fig, ax = plt.subplots(figsize=(16, 6))  # wider figure for more samples
+pivot.plot(kind="bar", stacked=True, width=0.9, ax=ax)
+
+plt.ylabel("Relative abundance")
+plt.xlabel("Sample")
+plt.xticks(rotation=45, ha="right")
+
+# Legend top → bottom
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles[::-1], labels[::-1], title=args.level,
+          bbox_to_anchor=(1.05, 1), loc="upper left")
+
+plt.tight_layout()
+
+)
+
+```
 
 ## EMU
 
 Emu is a relative abundance estimator for 16S genomic sequences. The method is optimized for error-prone full-length reads, but can also be utilized for short-read data.
+
+known to overinflate diversity, also reported to capture more taxa in mock dataset than alternatives.
 
 Download databases, from https://osf.io/32sh5/overview and https://osf.io/56uf7/overview :
 
@@ -1378,7 +1414,7 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
   -l "$taxa_level" \
   -n 9 \
   --output "$InDir"/stacked-barplot_"$taxa_level".svg \
-  --order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
+  --order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
 
 #plot heatmap plots
 apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/plot_taxa_heatmap.py \
@@ -1387,7 +1423,7 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
   -l "$taxa_level" \
   --log \
   --top_n 50 \
-  --sample_order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
+  --sample_order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
 
 #PCoA
 apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/emu_plot_pcoa.py \
@@ -1398,6 +1434,990 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
 
 done
 done
+
+for InDir in $(ls -d /data/users/theaven/Ips_jam_project/emu/*/*/* | grep -v '/data/users/theaven/Ips_jam_project/emu/16S/emu2026/1' ); do
+  for file in "$InDir"/*rel-abundance.tsv; do
+    OutDir=$(dirname "$file")/4
+mkdir "$OutDir"
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/propogate_taxa2.py -i "$file" -o "$OutDir"/$(basename "$file")
+done
+done
+
+for InDir in $(ls -d /data/users/theaven/Ips_jam_project/emu/*/*/*/4 | grep -v '/data/users/theaven/Ips_jam_project/emu/16S/emu2026/1' ); do
+  for taxa_level in species genus family order class phylum; do
+
+#plot stacked barplots
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/plot_emu_abundance2.py \
+  -i "$InDir" \
+  -l "$taxa_level" \
+  -n 13 \
+  --output "$InDir"/stacked-barplot_"$taxa_level".svg \
+  --order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
+done
+done
+```
+```bash
+for InDir in /data/users/theaven/Ips_jam_project/emu/*/*/*/4; do
+  cd "$InDir"
+for f in *_rel-abundance.tsv; do
+    sample=$(basename "$f" _rel-abundance.tsv)
+
+    awk -v sample="$sample" '
+    BEGIN { unmapped=0; total=0 }
+
+    NR==1 { next }  # skip header
+
+    {
+        total += $10
+
+        if ($1 == "unmapped") {
+            unmapped += $10
+        }
+    }
+
+    END {
+        if (total > 0)
+            printf "%s\t%.4f\t%.4f\t%.2f%%\n", sample, unmapped, total, (unmapped/total)*100
+        else
+            printf "%s\t0\t0\t0%%\n", sample
+    }' "$f"
+
+done > unmapped_percentage.tsv
+done
+```
+***16S***
+
+Stats and plotting in R - standardise with illumina workflow
+```bash
+cd /data/users/theaven/Ips_jam_project/emu/16S/silva/trim/4
+
+for f in *_rel-abundance.tsv; do
+  sample=${f/_rel-abundance.tsv/}
+
+  awk -v s="$sample" '
+  BEGIN {OFS="\t"}
+
+  NR>1 {
+
+    count = $10
+
+    # keep only valid numeric counts
+    if (count !~ /^[0-9.]+$/) next
+
+    # build taxonomy string
+    tax = $1 ";" $3 ";" $4 ";" $5 ";" $6 ";" $7 ";" $8 ";" $9
+
+    # filter junk taxa
+    if (tax ~ /unidentified/ || tax ~ /;;;;/) next
+
+    print tax, s, count
+  }' "$f"
+
+done \
+| awk '
+BEGIN {OFS="\t"}
+{
+  tax[$1]
+  sam[$2]
+  val[$1,$2]=$3
+}
+
+END {
+  printf "taxon"
+  for (s in sam) printf OFS s
+  print ""
+
+  for (t in tax) {
+    printf t
+    for (s in sam) {
+      printf OFS (val[t,s]+0)
+    }
+    print ""
+  }
+}
+' > EMU_otu_matrix_16s2.tsv
+```
+```R
+long_otu <- read.table("EMU_otu_matrix_16s2.tsv", header=TRUE, sep="\t", row.names=1)
+colnames(long_otu) <- gsub("\\.", "-", colnames(long_otu))
+rownames(long_otu)[rownames(long_otu) == "mapped_unclassified;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root"] <- "mapped_unclassified;unclassified;unclassified;unclassified;unclassified;unclassified;unclassified;unclassified"
+rownames(long_otu)[rownames(long_otu) == "mapped_filtered;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root"] <- "mapped_filtered;filtered;filtered;filtered;filtered;filtered;filtered;filtered"
+rownames(long_otu)[rownames(long_otu) == "unmapped;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root"] <- "unmapped;unmapped;unmapped;unmapped;unmapped;unmapped;unmapped;unmapped"
+new_names <- sub("^[^;]+;", "", rownames(long_otu))
+long_otu$taxa <- new_names
+long_otu_merged <- aggregate(
+  . ~ taxa,
+  data = long_otu,
+  FUN = sum
+)
+rownames(long_otu_merged) <- long_otu_merged$taxa
+long_otu_merged$taxa <- NULL
+long_otu <- long_otu_merged
+
+long_tax <- do.call(rbind, strsplit(rownames(long_otu), ";"))
+colnames(long_tax) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
+long_tax <- long_tax[, 1:7]  # ensure correct columns only
+tax_key <- apply(long_tax, 1, function(x) {
+  paste(x, collapse = ";")
+})
+tax_key <- gsub("\\s+", "", tax_key)
+rownames(long_tax) <- tax_key
+```
+Can be input to the illumina pipeline from here
+```R
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+# Load metadata
+meta <- read_tsv(
+  "down_20260609/sample-metadata.tsv",
+  comment = "",  
+  show_col_types = FALSE
+)
+meta <- column_to_rownames(meta, var = "#SampleID")
+
+# Create objects
+TAX <- tax_table(as.matrix(long_tax))
+OTU <- otu_table(as.matrix(long_otu), taxa_are_rows = TRUE)
+SAM <- sample_data(meta)
+ps <- phyloseq(OTU, SAM, TAX)
+
+tax_table(ps) <- apply(tax_table(ps), 2, trimws)
+tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
+
+ps_genus <- tax_glom(ps, taxrank = "Genus")
+ps_genus <- subset_taxa(ps_genus, !Genus %in% c("unmapped", "filtered", "unclassified")) #remove unmapped
+
+ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+
+df <- psmelt(ps_rel)
+
+taxa_abund <- tapply(df$Abundance, df$Genus, sum)
+
+top <- names(sort(taxa_abund, decreasing = TRUE))[1:13]
+
+df$Genus <- as.character(df$Genus)
+df$Genus[!df$Genus %in% top] <- "Other"
+
+df$Genus <- factor(df$Genus, levels = c(top, "Other"))
+
+auto_cols <- setNames(c(
+  "#008000", "wheat3", "darkblue", "sienna3", "deeppink4", "#ff00ec","skyblue3", "orange" ,"#9467bf", "red3" ,"#71c837" ,"#000000", "#4dfad8"
+), top[1:length(top)])
+
+final_cols <- c(auto_cols, "Other" = "grey80")
+
+df_sub <- subset(df, treatment != "blank")
+
+df_sub$treatment <- as.character(df_sub$treatment)
+
+df_sub$Group <- paste(df_sub$treatment, df_sub$Sample, sep = " ")
+df_sub$Label <- paste(df_sub$treatment, df_sub$Sample)
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+df_sub <- df_sub[order(df_sub$treatment, df_sub$Sample), ]
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = final_cols) +
+  scale_x_discrete(drop = FALSE) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
+```
+Alpha diversity:
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson")) #chao is not appropriate for EMU proportional data and observed in sketchy
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta[meta$treatment != "blank", , drop = FALSE]  
+ps_f <- prune_samples(rownames(meta_f), ps_genus)
+meta_f <- meta_f[sample_names(ps_f), , drop = FALSE]
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  scale_fill_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.6153 - normal
+#Insecticide - p-value = 0.6341 - normal
+#Microsap - p-value = 0.1651 - normal
+
+pairwise.t.test(alpha_df$Shannon,
+                alpha_df$treatment,
+                p.adjust.method = "BH",
+                pool.sd = FALSE)
+#            Control Insecticide
+#Insecticide 0.38    -          
+#Microsap    0.51    0.31       
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.57    -          
+#Microsap    0.65    0.48 
+```
+beta diversity:
+
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.00869 0.0043441 0.2625    999  0.773
+#Residuals 21 0.34756 0.0165503 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.5000 0.05983 0.6682  0.888
+#Residual 21   7.8558 0.94017              
+#Total    23   8.3557 1.00000  
+#No significant difference in community composition between treatments, treatment explains only ~5.9% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.004472 0.0022358 0.2319    999  0.775
+#Residuals 21 0.202460 0.0096410
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.7645 0.10106 1.1805    0.2
+#Residual 21   6.7997 0.89894              
+#Total    23   7.5641 1.00000 
+#No significant difference in community composition between treatments, treatment explains ~10.1% of variation     
+```
+No differences
+
+Presence/abscence - bubble plot:
+```R
+#build matrix for Genus level
+ps_f_genus <- tax_glom(ps_f, taxrank = "Genus")
+ps_f_genus <- filter_taxa(ps_f_genus, function(x) sum(x) > 0, TRUE)
+
+mat <- as(otu_table(ps_f_genus), "matrix")
+if (taxa_are_rows(ps_f_genus)) {
+  mat <- t(mat)
+}
+
+pa_mat <- (mat > 0) * 1
+
+meta_mat <- meta_f[match(rownames(pa_mat), rownames(meta_f)), , drop = FALSE]
+
+group <- meta_mat$treatment
+groups <- unique(group)
+stopifnot(all(rownames(pa_mat) == rownames(meta_mat)))
+
+#Pairwise Fisher tests (ALL pairs)
+pair_list <- combn(groups, 2, simplify = FALSE)
+
+pairwise_p <- lapply(pair_list, function(grp) {
+  g1 <- grp[1]
+  g2 <- grp[2]
+  idx <- group %in% c(g1, g2)
+  apply(pa_mat[idx, , drop = FALSE], 2, function(x) {
+    tab <- table(x, group[idx])
+    if (nrow(tab) < 2 || ncol(tab) < 2) return(NA)
+    if (all(tab == 0)) return(NA)
+    fisher.test(tab)$p.value
+  })
+})
+
+names(pairwise_p) <- sapply(pair_list, paste, collapse = "_vs_")
+
+pairwise_p_adj <- lapply(pairwise_p, function(p) {
+  p.adjust(p, method = "BH")
+})
+
+#Extract significant taxa (ANY comparison)
+sig_taxa <- unique(unlist(lapply(pairwise_p_adj, function(p) {
+  names(p)[which(p < 0.05 & !is.na(p))]
+})))
+
+prev_list <- lapply(groups, function(g) {
+  colMeans(pa_mat[group == g, sig_taxa, drop = FALSE])
+})
+names(prev_list) <- groups
+
+tax <- as.data.frame(tax_table(ps_f_genus))
+tax_labels <- tax$Genus
+names(tax_labels) <- rownames(tax)
+
+df <- data.frame(
+  Taxon = sig_taxa,
+  Label = tax_labels[sig_taxa]
+)
+
+for (g in groups) {
+  df[[paste0(g, "_prev")]] <- prev_list[[g]]
+}
+
+#Long format for plotting
+df_long <- pivot_longer(
+  df,
+  cols = ends_with("_prev"),
+  names_to = "Group",
+  values_to = "Prevalence"
+)
+
+df_long$Group <- gsub("_prev", "", df_long$Group)
+
+df_long$Label[is.na(df_long$Label)] <- df_long$Taxon
+
+ggplot(df_long, aes(
+  x = Group,
+  y = Label,
+  size = Prevalence,
+  color = Group
+)) +
+  geom_point(alpha = 0.85) +
+  scale_size(range = c(2, 10)) +
+  theme_classic(base_size = 14) +
+  labs(
+    x = NULL,
+    y = "Genus",
+    size = "Prevalence",
+    color = "Group",
+    title = "Significant taxa (pairwise Fisher tests, FDR < 0.05)"
+  )
+```
+No significant taxa - hard with only 8 reps
+
+Presence/abscence + adundance - heatmap:
+```R
+tax_tab <- as.data.frame(tax_table(ps_f_genus))
+
+tax_names <- tax_tab$Genus
+tax_names[is.na(tax_names) | tax_names == ""] <- "Unknown"
+tax_names <- make.unique(tax_names)
+
+mat_asv <- mat
+colnames(mat_asv) <- tax_names
+
+mat_genus_rel <- sweep(mat_asv, 1, rowSums(mat_asv), "/")
+mat_genus_rel_log <- log10(mat_genus_rel + 1e-6)
+
+#Order samples
+meta_mat <- meta[rownames(mat_genus_rel_log), , drop = FALSE ]
+
+ord <- order(meta_mat$treatment)
+
+mat_ordered <- mat_genus_rel_log[ord, ]
+meta_ordered <- meta_mat[ord, , drop = FALSE  ]
+
+# --- Define colors: 0 = white, then blue → red ---
+# Avoid including 0 in gradient
+nonzero_vals <- mat_ordered[mat_ordered > 0]
+
+# --- Row annotations ---
+annotation_row <- data.frame(
+  Treatment = meta_ordered$treatment
+)
+
+rownames(annotation_row) <- rownames(mat_ordered)
+
+#Optional: gaps
+gaps <- cumsum(table(meta_ordered$treatment))
+
+pheatmap(
+  mat_ordered,
+  color = colorRampPalette(c("white", "blue", "red"))(100),
+  breaks = seq(
+    min(mat_ordered, na.rm = TRUE),
+    max(mat_ordered, na.rm = TRUE),
+    length.out = 101
+  ),
+  cluster_rows = FALSE,
+  cluster_cols = TRUE,
+  annotation_row = annotation_row,
+  gaps_row = gaps,
+  border_color = "grey90",
+  fontsize_col = 5
+)
+```
+
+***ITS***
+
+Stats and plotting in R - standardise with illumina workflow
+```bash
+cd /data/users/theaven/Ips_jam_project/emu/ITS/unite-all/trim/4
+
+for f in *_rel-abundance.tsv; do
+  sample=${f/_rel-abundance.tsv/}
+
+  awk -v s="$sample" '
+  BEGIN {OFS="\t"}
+
+  NR>1 {
+
+    count = $10
+
+    # keep only valid numeric counts
+    if (count !~ /^[0-9.]+$/) next
+
+    # build taxonomy string
+    tax = $1 ";" $3 ";" $4 ";" $5 ";" $6 ";" $7 ";" $8 ";" $9
+
+    # filter junk taxa
+    if (tax ~ /unidentified/ || tax ~ /;;;;/) next
+
+    print tax, s, count
+  }' "$f"
+
+done \
+| awk '
+BEGIN {OFS="\t"}
+{
+  tax[$1]
+  sam[$2]
+  val[$1,$2]=$3
+}
+
+END {
+  printf "taxon"
+  for (s in sam) printf OFS s
+  print ""
+
+  for (t in tax) {
+    printf t
+    for (s in sam) {
+      printf OFS (val[t,s]+0)
+    }
+    print ""
+  }
+}
+' > EMU_otu_matrix_its2.tsv
+```
+```R
+long_otu <- read.table("EMU_otu_matrix_its2.tsv", header=TRUE, sep="\t", row.names=1)
+colnames(long_otu) <- gsub("\\.", "-", colnames(long_otu))
+rownames(long_otu)[rownames(long_otu) == "mapped_unclassified;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root"] <- "mapped_unclassified;unclassified;unclassified;unclassified;unclassified;unclassified;unclassified;unclassified"
+rownames(long_otu)[rownames(long_otu) == "mapped_filtered;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root"] <- "mapped_filtered;filtered;filtered;filtered;filtered;filtered;filtered;filtered"
+rownames(long_otu)[rownames(long_otu) == "unmapped;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root"] <- "unmapped;unmapped;unmapped;unmapped;unmapped;unmapped;unmapped;unmapped"
+rownames(long_otu)[rownames(long_otu) == "122;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root"] <- "unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root;unclassified_root2"
+new_names <- sub("^[^;]+;", "", rownames(long_otu))
+long_otu$taxa <- new_names
+long_otu_merged <- aggregate(
+  . ~ taxa,
+  data = long_otu,
+  FUN = sum
+)
+rownames(long_otu_merged) <- long_otu_merged$taxa
+long_otu_merged$taxa <- NULL
+long_otu <- long_otu_merged
+
+long_tax <- do.call(rbind, strsplit(rownames(long_otu), ";"))
+colnames(long_tax) <- c("Kingdom","Phylum","Class","Order","Family","Genus","Species")
+long_tax <- long_tax[, 1:7]  # ensure correct columns only
+tax_key <- apply(long_tax, 1, function(x) {
+  paste(x, collapse = ";")
+})
+tax_key <- gsub("\\s+", "", tax_key)
+rownames(long_tax) <- tax_key
+```
+Can be input to the illumina pipeline from here
+```R
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+# Load metadata
+meta <- read_tsv(
+  "down_20260609/sample-metadata.tsv",
+  comment = "",  
+  show_col_types = FALSE
+)
+meta <- column_to_rownames(meta, var = "#SampleID")
+
+# Create objects
+TAX <- tax_table(as.matrix(long_tax))
+OTU <- otu_table(as.matrix(long_otu), taxa_are_rows = TRUE)
+SAM <- sample_data(meta)
+ps <- phyloseq(OTU, SAM, TAX)
+
+tax_table(ps) <- apply(tax_table(ps), 2, trimws)
+tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
+
+ps_genus <- tax_glom(ps, taxrank = "Genus")
+ps_genus <- subset_taxa(ps_genus, !Genus %in% c("unmapped", "filtered", "unclassified")) #remove unmapped
+
+ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+
+df <- psmelt(ps_rel)
+
+taxa_abund <- tapply(df$Abundance, df$Genus, sum)
+
+top <- names(sort(taxa_abund, decreasing = TRUE))[1:13]
+
+df$Genus <- as.character(df$Genus)
+df$Genus[!df$Genus %in% top] <- "Other"
+
+df$Genus <- factor(df$Genus, levels = c(top, "Other"))
+
+auto_cols <- setNames(c(
+  "darkblue", "deeppink4", "orange","#00ffff", "sienna3", "wheat3","#ccffaa" ,"#00ffcc" ,"yellow", "#6ea02c", "#008000", "red3", "#ff00ec"
+), top[1:length(top)])
+
+final_cols <- c(auto_cols, "Other" = "grey80")
+
+df_sub <- subset(df, treatment != "blank")
+
+df_sub$treatment <- as.character(df_sub$treatment)
+
+df_sub$Group <- paste(df_sub$treatment, df_sub$Sample, sep = " ")
+df_sub$Label <- paste(df_sub$treatment, df_sub$Sample)
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+df_sub <- df_sub[order(df_sub$treatment, df_sub$Sample), ]
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = final_cols) +
+  scale_x_discrete(drop = FALSE) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
+```
+Alpha diversity:
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson")) #chao is not appropriate for EMU proportional data and observed in sketchy
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta[meta$treatment != "blank", , drop = FALSE]  
+ps_f <- prune_samples(rownames(meta_f), ps_genus)
+meta_f <- meta_f[sample_names(ps_f), , drop = FALSE]
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  scale_fill_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.01199 - not normal
+#Insecticide - p-value = 0.5794 - normal
+#Microsap - p-value = 0.9767 - normal
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.35    -          
+#Microsap    0.25    0.96 
+```
+beta diversity:
+
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.09413 0.047067 1.5849    999  0.228
+#Residuals 21 0.62365 0.029698 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.6562 0.09005 1.0391  0.384
+#Residual 21   6.6307 0.90995              
+#Total    23   7.2869 1.00000   
+#No significant difference in community composition between treatments, treatment explains only ~9.0% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.003626 0.0018129 0.2333    999  0.794
+#Residuals 21 0.163153 0.0077692 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.5180 0.08328 0.9539  0.558
+#Residual 21   5.7016 0.91672              
+#Total    23   6.2195 1.00000 
+#No significant difference in community composition between treatments, treatment explains ~8.3% of variation     
+```
+No differences
+
+Presence/abscence - bubble plot:
+```R
+#build matrix for Genus level
+ps_f_genus <- tax_glom(ps_f, taxrank = "Genus")
+ps_f_genus <- filter_taxa(ps_f_genus, function(x) sum(x) > 0, TRUE)
+
+mat <- as(otu_table(ps_f_genus), "matrix")
+if (taxa_are_rows(ps_f_genus)) {
+  mat <- t(mat)
+}
+
+pa_mat <- (mat > 0) * 1
+
+meta_mat <- meta_f[match(rownames(pa_mat), rownames(meta_f)), , drop = FALSE]
+
+group <- meta_mat$treatment
+groups <- unique(group)
+stopifnot(all(rownames(pa_mat) == rownames(meta_mat)))
+
+#Pairwise Fisher tests (ALL pairs)
+pair_list <- combn(groups, 2, simplify = FALSE)
+
+pairwise_p <- lapply(pair_list, function(grp) {
+  g1 <- grp[1]
+  g2 <- grp[2]
+  idx <- group %in% c(g1, g2)
+  apply(pa_mat[idx, , drop = FALSE], 2, function(x) {
+    tab <- table(x, group[idx])
+    if (nrow(tab) < 2 || ncol(tab) < 2) return(NA)
+    if (all(tab == 0)) return(NA)
+    fisher.test(tab)$p.value
+  })
+})
+
+names(pairwise_p) <- sapply(pair_list, paste, collapse = "_vs_")
+
+pairwise_p_adj <- lapply(pairwise_p, function(p) {
+  p.adjust(p, method = "BH")
+})
+
+#Extract significant taxa (ANY comparison)
+sig_taxa <- unique(unlist(lapply(pairwise_p_adj, function(p) {
+  names(p)[which(p < 0.05 & !is.na(p))]
+})))
+
+prev_list <- lapply(groups, function(g) {
+  colMeans(pa_mat[group == g, sig_taxa, drop = FALSE])
+})
+names(prev_list) <- groups
+
+tax <- as.data.frame(tax_table(ps_f_genus))
+tax_labels <- tax$Genus
+names(tax_labels) <- rownames(tax)
+
+df <- data.frame(
+  Taxon = sig_taxa,
+  Label = tax_labels[sig_taxa]
+)
+
+for (g in groups) {
+  df[[paste0(g, "_prev")]] <- prev_list[[g]]
+}
+
+#Long format for plotting
+df_long <- pivot_longer(
+  df,
+  cols = ends_with("_prev"),
+  names_to = "Group",
+  values_to = "Prevalence"
+)
+
+df_long$Group <- gsub("_prev", "", df_long$Group)
+
+df_long$Label[is.na(df_long$Label)] <- df_long$Taxon
+
+ggplot(df_long, aes(
+  x = Group,
+  y = Label,
+  size = Prevalence,
+  color = Group
+)) +
+  geom_point(alpha = 0.85) +
+  scale_size(range = c(2, 10)) +
+  theme_classic(base_size = 14) +
+  labs(
+    x = NULL,
+    y = "Genus",
+    size = "Prevalence",
+    color = "Group",
+    title = "Significant taxa (pairwise Fisher tests, FDR < 0.05)"
+  )
+```
+No significant taxa - hard with only 8 reps
+
+Presence/abscence + adundance - heatmap:
+```R
+tax_tab <- as.data.frame(tax_table(ps_f_genus))
+
+tax_names <- tax_tab$Genus
+tax_names[is.na(tax_names) | tax_names == ""] <- "Unknown"
+tax_names <- make.unique(tax_names)
+
+mat_asv <- mat
+colnames(mat_asv) <- tax_names
+
+mat_genus_rel <- sweep(mat_asv, 1, rowSums(mat_asv), "/")
+mat_genus_rel_log <- log10(mat_genus_rel + 1e-6)
+
+#Order samples
+meta_mat <- meta[rownames(mat_genus_rel_log), , drop = FALSE ]
+
+ord <- order(meta_mat$treatment)
+
+mat_ordered <- mat_genus_rel_log[ord, ]
+meta_ordered <- meta_mat[ord, , drop = FALSE  ]
+
+# --- Define colors: 0 = white, then blue → red ---
+# Avoid including 0 in gradient
+nonzero_vals <- mat_ordered[mat_ordered > 0]
+
+# --- Row annotations ---
+annotation_row <- data.frame(
+  Treatment = meta_ordered$treatment
+)
+
+rownames(annotation_row) <- rownames(mat_ordered)
+
+#Optional: gaps
+gaps <- cumsum(table(meta_ordered$treatment))
+
+pheatmap(
+  mat_ordered,
+  color = colorRampPalette(c("white", "blue", "red"))(100),
+  breaks = seq(
+    min(mat_ordered, na.rm = TRUE),
+    max(mat_ordered, na.rm = TRUE),
+    length.out = 101
+  ),
+  cluster_rows = FALSE,
+  cluster_cols = TRUE,
+  annotation_row = annotation_row,
+  gaps_row = gaps,
+  border_color = "grey90",
+  fontsize_col = 7
+)
 ```
 
 ## NanoVI
@@ -1507,7 +2527,7 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
 
 done
 ```
-***Repeat EMU with filtered reads***
+***Repeat nanovi with filtered reads***
 
 ```bash
 #Create the input samplesheet:              
@@ -1596,7 +2616,9 @@ Dorado (basecalling + adapter trimming)
 → Length filtering (e.g. 1200–1800 bp for 16S)
 → Optional: filtlong (moderate filtering)
 → EMU / NanoVI / wf-16s
+
 #### Vsearch
+
 10.1111/1755-0998.13991 use vsearch and usearch to genertate OTUs with unoise, others use usearch 10.1093/pnasnexus/pgae411 with unoise algorithms, they report good results with these denoising algorithms despite being designed for illumina data (DADA2 is bad) - these are with UMI nanopore data...
 ```bash
 srun -p bioagri  -c 4 --mem 16G --pty bash
@@ -1604,47 +2626,6 @@ module load anaconda3
 conda activate vsearch
 
 #Dereplicate, denoise, de-chimera
-#With minsize 2
-for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
-  OutDir="$(dirname "$Reads")/vsearch"
-  mkdir -p "$OutDir"
-  seqtk seq -A "$Reads" > tmp.fasta
-  vsearch --derep_fulllength tmp.fasta \
-    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --sizeout \
-    --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-
-  vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --minsize 2 --id 0.97 \
-    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-
-  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
-    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.nonchimera.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-done
-
-for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
-  OutDir="$(dirname "$Reads")/vsearch"
-  mkdir -p "$OutDir"
-  seqtk seq -A "$Reads" > tmp.fasta
-  vsearch --derep_fulllength tmp.fasta \
-    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --sizeout \
-    --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-
-  vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --minsize 2 --id 0.97 \
-    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-
-  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
-    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.nonchimera.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-done
-
 #With minsize 1
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
   OutDir="$(dirname "$Reads")/vsearch"
@@ -1654,15 +2635,56 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/Cu
     --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
     --sizeout \
     --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
 
   vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
     --minsize 1 --id 0.97 \
     --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
-    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
+    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
 
   vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
     --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.nonchimera.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
+done
+
+for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
+  OutDir="$(dirname "$Reads")/vsearch"
+  mkdir -p "$OutDir"
+  seqtk seq -A "$Reads" > tmp.fasta
+  vsearch --derep_fulllength tmp.fasta \
+    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --sizeout \
+    --relabel uniq \
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
+
+  vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --minsize 1 --id 0.97 \
+    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
+    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
+
+  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
+    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.nonchimera.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
+done
+
+#With minsize 2
+for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
+  OutDir="$(dirname "$Reads")/vsearch"
+  mkdir -p "$OutDir"
+  seqtk seq -A "$Reads" > tmp.fasta
+  vsearch --derep_fulllength tmp.fasta \
+    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --sizeout \
+    --relabel uniq \
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
+
+  vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --minsize 2 --id 0.97 \
+    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
+
+  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
+    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.nonchimera.fa" \
     --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
 done
 
@@ -1677,14 +2699,15 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/Cu
     --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
 
   vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --minsize 1 --id 0.97 \
-    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
-    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
+    --minsize 2 --id 0.97 \
+    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
 
-  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
-    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.nonchimera.fa" \
+  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.fa" \
+    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.nonchimera.fa" \
     --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
 done
+
 
 for file in /data/users/theaven/Ips_jam_project/qc_data/minion/*/basecalls/CutAdapt/Filtlong/vsearch/*_1.log /data/users/theaven/Ips_jam_project/qc_data/minion/*/basecalls/CutAdapt/Filtlong/vsearch/*_2.log; do
 OutFile=$(dirname $file)/minsize_$(basename $file | cut -d '_' -f2 | sed 's@.log@@g')_stats.tsv
@@ -1721,12 +2744,57 @@ echo -e "$ID\t$sequences\t$min\t$max\t$avg\t$unique_sequences\t$discarded_sequen
 done 
 ```
 dataset had massive sequence-level noise
+
+Try clustering with course grouping by similarity alone - no denoising.
 ```bash
 srun -p bioagri  -c 4 --mem 16G --pty bash
 module load anaconda3
 conda activate vsearch
 
-#Dereplicate, denoise, de-chimera
+#Dereplicate, de-chimera
+#With minsize 1
+for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
+  OutDir="$(dirname "$Reads")/vsearch"
+  mkdir -p "$OutDir"
+  seqtk seq -A "$Reads" > tmp.fasta
+  vsearch --derep_fulllength tmp.fasta \
+    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --sizeout \
+    --relabel uniq \
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+
+  vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --id 0.97 --strand both --sizein --sizeout \
+    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
+    --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.uc" \
+    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+
+  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
+    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.nonchimera.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+done
+
+for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
+  OutDir="$(dirname "$Reads")/vsearch"
+  mkdir -p "$OutDir"
+  seqtk seq -A "$Reads" > tmp.fasta
+  vsearch --derep_fulllength tmp.fasta \
+    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --sizeout \
+    --relabel uniq \
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+
+  vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --id 0.97 --strand both --sizein --sizeout \
+    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
+    --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.uc" \
+    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+
+  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
+    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.nonchimera.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+done
+
 #With minsize 2
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
   OutDir="$(dirname "$Reads")/vsearch"
@@ -1736,17 +2804,17 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/Cu
     --output "$OutDir/$(basename "$Reads" .fastq.gz).unique-2cs.fa" \
     --sizeout --minuniquesize 2  \
     --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 
   vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique-2cs.fa" \
     --id 0.97 --strand both --sizein --sizeout \
     --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.fa" \
     --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.uc" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 
   vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.fa" \
     --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.nonchimera.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 done
 
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
@@ -1757,59 +2825,16 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/Cu
     --output "$OutDir/$(basename "$Reads" .fastq.gz).unique-2cs.fa" \
     --sizeout --minuniquesize 2 \
     --relabel uniq  \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 
   vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique-2cs.fa" \
     --id 0.97 --strand both --sizein --sizeout \
     --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.fa" \
     --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.uc" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 
   vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.fa" \
     --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.nonchimera.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
-done
-
-#With minsize 1
-for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
-  OutDir="$(dirname "$Reads")/vsearch"
-  mkdir -p "$OutDir"
-  seqtk seq -A "$Reads" > tmp.fasta
-  vsearch --derep_fulllength tmp.fasta \
-    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --sizeout \
-    --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
-
-  vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --id 0.97 --strand both --sizein --sizeout \
-    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
-    --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.uc" \
-    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
-
-  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
-    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.nonchimera.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
-done
-
-for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
-  OutDir="$(dirname "$Reads")/vsearch"
-  mkdir -p "$OutDir"
-  seqtk seq -A "$Reads" > tmp.fasta
-  vsearch --derep_fulllength tmp.fasta \
-    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --sizeout \
-    --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
-
-  vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --id 0.97 --strand both --sizein --sizeout \
-    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
-    --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.uc" \
-    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
-
-  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
-    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.nonchimera.fa" \
     --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 done
 
@@ -1847,6 +2872,72 @@ total_sequences=$(cat "$file" | grep -oP 'in \K[0-9]+ total sequences' | grep -o
 echo -e "$ID\t$sequences\t$min\t$max\t$avg\t$unique_sequences\t$discarded_sequences\t$percentage_discarded\t$clusters\t$cluster_avg\t$cluster_max\t$singletons\t$percent_seqs\t$percent_clusters\t$min2\t$max2\t$avg2\t$chimeras\t$non_chimeras\t$total_sequences" >> "$OutFile"
 done 
 ```
+Still high levels of noise - many OTUs with minsize 1, with minsize 2 >95% of reads are dropped due to high error rate of nanopore reads.
+
+#### Kraken
+
+Kraken has been run within the EPI2ME pipeline - this missassigned arthopoda reads based on the results of the other classigfication tools. Will try running seperetedly with different databases.
+
+```bash
+for Reads in $(ls /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.trim.filtlong.fastq.gz | grep -v 'unclassified\|code24'); do
+Task=kraken
+Database=/data/kraken2/pluspf
+OutDir="$(dirname "$Reads")/kraken2.17.1/$(basename  "$Database")"
+Samplesheet=/data/users/theaven/Ips_jam_project/nanovi/samplesheet-trim.csv
+OutPrefix=$(awk -F',' -v f="$(basename "$Reads" .trim.filtlong.fastq.gz)" '$2 ~ "/ITS/" && $2 ~ f {print $1}' "$Samplesheet")
+ID="$OutPrefix"_"$(basename  "$Database")"
+ExpectedOutput="$OutDir"/"$OutPrefix"_report.txt
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 1 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    mkdir -p $OutDir
+    ID=$(echo "$OutDir" | rev | cut -d '/' -f1 | rev)
+
+    jobid=$(sbatch --job-name="$Task" --parsable /data/users/theaven/run_kraken2.sh "$Reads" "$Database" "$OutDir" "$OutPrefix" )
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+
+done
+
+for Reads in $(ls /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.trim.filtlong.fastq.gz | grep -v 'unclassified\|code24'); do
+Task=kraken
+Database=/data/kraken2/NCBI/k2_NCBI_reference_20251007
+OutDir="$(dirname "$Reads")/kraken2.17.1/$(basename  "$Database")"
+Samplesheet=/data/users/theaven/Ips_jam_project/nanovi/samplesheet-trim.csv
+OutPrefix=$(awk -F',' -v f="$(basename "$Reads" .trim.filtlong.fastq.gz)" '$2 ~ "/ITS/" && $2 ~ f {print $1}' "$Samplesheet")
+ID="$OutPrefix"_"$(basename  "$Database")"
+ExpectedOutput="$OutDir"/"$OutPrefix"_report.txt
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 1 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    mkdir -p $OutDir
+    ID=$(echo "$OutDir" | rev | cut -d '/' -f1 | rev)
+
+    jobid=$(sbatch --job-name="$Task" --parsable /data/users/theaven/run_kraken2.sh "$Reads" "$Database" "$OutDir" "$OutPrefix" )
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+
+done
+```
+
+
+
 Nanoclust
 medaka/racon
 ```bash
@@ -1923,4 +3014,2055 @@ qiime diversity beta-phylogenetic \
   --i-table table.qza \
   --i-phylogeny tree.qza \
   --p-metric weighted_unifrac
+```
+
+### BLASTN <a name="12"></a>
+
+BLAST is alignment based, limited by 'best hit' interpretation, and prone to misidentifying short or conserved seqeunces. For eDNA/metabarcoding, BLAST is often too literal — it finds the closest sequence, even if it’s wrong. However, the NCBI nt database is far larger than any dedicated database, including SILVA.
+
+BLASTN vs NCBI nt database:
+```bash
+Task=blast
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 3 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  #Run BLAST with many hits
+for ASV in $(find /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/ -name '*.trim.fastq' -type f | grep -v 'unclassified'); do
+  Task=blast
+  Database=/data/blobtoolkit/nt/nt
+  Max_target=10
+  Samplesheet=/data/users/theaven/Ips_jam_project/nanovi/samplesheet-trim.csv
+  OutPrefix=$(awk -F',' -v f="$ASV" '$2==f {print $1}' "$Samplesheet")
+  seqkit fq2fa "$ASV" > "$(dirname $ASV)"/"$OutPrefix".fasta
+  OutDir="$(dirname $ASV)"/"$Task"
+  echo "$OutPrefix"
+  mkdir -p $OutDir
+  ExpectedOutput="$OutDir"/${OutPrefix}.vs."$(basename $Database)".mts"$Max_target".hsp1.1e25.megablast.out
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 4 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_blastn2.sh "$(dirname $ASV)"/"$OutPrefix".fasta "$Database" "$OutDir" "$OutPrefix" "$Max_target")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+```
+Get LCA of BLAST hits for each read and collate into abundance table:
+```bash
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+
+for file in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/*.vs.nt.mts10.hsp1.1e25.megablast.out; do
+  mkdir $(dirname "$file")/LCA
+awk 'BEGIN{OFS="\t"} {
+print $1,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$3,$2,$14
+}' "$file" | sed '1d' > $(dirname "$file")/LCA/$(basename "$file")
+
+cuttoff_rank=family 
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/ncbi_blast_2_lca.py \
+  --input $(dirname "$file")/LCA/$(basename "$file") \
+  --nodes /data/users/theaven/db/blastn/taxonomy_db/nodes.dmp \
+  --names /data/users/theaven/db/blastn/taxonomy_db/names.dmp \
+  --outdir $(dirname "$file")/LCA \
+  --min-rank "$cuttoff_rank"
+
+sed -i 's/ /_/g' $(dirname "$file")/LCA/$(basename "$file" | sed 's@.out@@g').min-"$cuttoff_rank".lca.tsv
+
+awk 'NR>1 {sum += $8} END {print sum}' $(dirname "$file")/LCA/$(basename "$file" | sed 's@.out@@g').min-"$cuttoff_rank".lca.tsv
+done
+```
+```bash
+module load anaconda3
+conda activate taxonkit
+for file in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.out; do
+
+  outdir=$(dirname "$file")/lca
+  mkdir -p "$outdir"
+
+  base=$(basename "$file" .out)
+  tmp="$outdir/${base}.tsv"
+
+  # 1. top 10 hits per read (by bitscore)
+  sort -k1,1 -k3,3nr "$file" | \
+  awk '{
+    if(count[$1] < 10) {
+      print;
+      count[$1]++;
+    }
+  }' | \
+  cut -f1,2 | \
+  sed '/^\s*$/d' > "$tmp"
+
+  # 2. LCA
+  taxonkit lca "$tmp" > "$outdir/${base}_lca.tsv"
+
+done
+
+cut -f1,2 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.out > /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/lca/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.tsv
+taxonkit lca /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/lca/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.tsv
+```
+```bash
+module load anaconda3
+conda activate megan
+
+export _JAVA_OPTIONS="-Djava.io.tmpdir=$HOME/tmp"
+mkdir -p $HOME/tmp
+
+for file in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/*.vs.nt.mts10.hsp1.1e25.megablast.out; do
+  mkdir $(dirname "$file")/megan
+awk 'BEGIN{OFS="\t"} {
+print $1,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$3,$2,$14
+}' "$file" | sed '1d' > $(dirname "$file")/megan/$(basename "$file")
+
+blast2lca \
+  -i $(dirname "$file")/megan/$(basename "$file") \
+  -f BlastTab -m BlastN \
+  -a2t /data/users/theaven/db/ncbi/nucl_gb.accession2taxid \
+  -top 10 \
+  -ms 50 \
+  -me 0.01 \
+  -o $(dirname "$file")/megan/$(basename "$file")_lca.txt
+done
+
+#  -mdb /data/users/theaven/db/megan/megan-nr-r2.mdb \
+
+
+
+
+
+
+awk 'NR>1 {sum += $8} END {print sum}' /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/LCA/id_counts.tsv
+
+awk 'NR>1 {sum += $8} END {print sum}' temp.tsv
+
+awk -F'\t' 'NR > 1 { 
+    key = $1; 
+    for (i=2; i<=7; i++) key = key "\t" $i; 
+    counts[key]++; 
+    total++ 
+} 
+END { 
+    for (k in counts) { 
+        printf "%s\t%d\t%.8f\n", k, counts[k], counts[k]/total 
+    } 
+}' /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/LCA/SHBB01903-1.vs.nt.mts10.hsp1.1e25.megablast.min-family.LCA_per_read.debug.tsv | sort -t$'\t' -k8,8nr
+```
+```python
+from collections import defaultdict
+
+infile = "/data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/LCA/SHBB01903-1.vs.nt.mts10.hsp1.1e25.megablast.min-family.LCA_per_read.debug.tsv"
+
+counts = defaultdict(int)
+total = 0
+
+with open(infile, "r") as f:
+    header = next(f)  # skip header
+    for line in f:
+        if not line.strip():
+            continue
+        total += 1
+        cols = line.rstrip("\n").split("\t")
+        key = tuple(cols[:7])
+        counts[key] += 1
+
+with open("id_counts.tsv", "w") as out:
+    for key, c in counts.items():
+        proportion = c / total if total else 0
+        out.write("\t".join(map(str, key)) + f"\t{c}\t{proportion}\n")
+````
+```python
+import pandas as pd
+from collections import defaultdict
+
+# -----------------------------
+# 1. Load BLAST file
+# -----------------------------
+cols = [
+    "read_id", "subject", "pid", "aln_len",
+    "mismatch", "gapopen",
+    "qstart", "qend", "sstart", "send",
+    "evalue", "bit_score",
+    "taxid", "taxon"
+]
+
+df = pd.read_csv(
+    "/data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/megan/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.out",
+    sep="\t",
+    names=cols
+)
+
+df["taxid"] = df["taxid"].astype(str).str.split(";").str[0].astype(int)
+
+# -----------------------------
+# 2. Load NCBI taxonomy (nodes.dmp)
+# -----------------------------
+# Format: taxid -> parent_taxid
+
+def load_nodes(nodes_file):
+    parent = {}
+    with open(nodes_file, "r") as f:
+        for line in f:
+            parts = line.split("\t|\t")
+            taxid = int(parts[0])
+            parent_taxid = int(parts[1])
+            parent[taxid] = parent_taxid
+    return parent
+
+parent_map = load_nodes("/data/users/theaven/db/blastn/taxonomy_db/nodes.dmp")
+
+# -----------------------------
+# 3. Build ancestry path
+# -----------------------------
+def get_ancestors(taxid, parent_map):
+    path = set()
+    while taxid in parent_map and taxid != parent_map[taxid]:
+        path.add(taxid)
+        taxid = parent_map[taxid]
+    return path
+
+# -----------------------------
+# 4. MEGAN-style hit filtering
+#    (keep hits within 90% of best bit score)
+# -----------------------------
+def filter_hits(group):
+    best = group["bit_score"].max()
+    threshold = best * 0.90
+    return group[group["bit_score"] >= threshold]
+
+filtered = df.groupby("read_id", group_keys=False).apply(filter_hits)
+
+# -----------------------------
+# 5. Lowest Common Ancestor (LCA)
+# -----------------------------
+def lca_taxids(taxids, parent_map):
+    paths = []
+    for t in taxids:
+        paths.append(get_ancestors(t, parent_map))
+    if not paths:
+        return None
+    common = set.intersection(*paths)
+    return max(common) if common else 1  # fallback: root
+
+def assign_lca(group):
+    taxids = group["taxid"].unique()
+    return lca_taxids(taxids, parent_map)
+
+lca_series = filtered.groupby("read_id").apply(assign_lca)
+
+# -----------------------------
+# 6. Load names.dmp (taxid -> name)
+# -----------------------------
+def load_names(names_file):
+    names = {}
+    with open(names_file, "r") as f:
+        for line in f:
+            parts = line.split("\t|\t")
+            taxid = int(parts[0])
+            name = parts[1]
+            unique_name = parts[2]
+            name_class = parts[3]
+            if "scientific name" in name_class:
+                names[taxid] = name
+    return names
+
+names_map = load_names("/data/users/theaven/db/blastn/taxonomy_db/names.dmp")
+
+# -----------------------------
+# 7. Convert LCA taxid → name
+# -----------------------------
+lca_names = lca_series.map(lambda x: names_map.get(x, f"taxid_{x}"))
+
+# -----------------------------
+# 8. Abundance table
+# -----------------------------
+abundance = lca_names.value_counts().reset_index()
+abundance.columns = ["taxon", "read_count"]
+
+abundance["relative_abundance"] = (
+    abundance["read_count"] / abundance["read_count"].sum()
+)
+
+# -----------------------------
+# 9. Save results
+# -----------------------------
+abundance.to_csv("lca_abundance.tsv", sep="\t", index=False)
+
+print(abundance.head(20))
+```
+
+### ITSx
+
+Luciano suggests splitting the long ITS reads into constituent ITS1 and ITS2 regions and seeing if these can be classified better.
+
+```bash
+for file in $(find /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/ -name '*.trim.fastq' -type f | grep -v 'unclassified'); do
+  Task=ITSx
+  Samplesheet=/data/users/theaven/Ips_jam_project/nanovi/samplesheet-trim.csv
+  OutPrefix=$(awk -F',' -v f="$file" '$2==f {print $1}' "$Samplesheet")
+  OutDir="$(dirname $file)"/"$Task"/"$OutPrefix"
+  echo "$OutPrefix"
+  mkdir -p $OutDir
+  ExpectedOutput="$OutDir"/${OutPrefix}.ITS1.fasta
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 3 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_ITSx.sh "$file" "$OutPrefix" "$OutDir")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+```
+
+## Illumina sequencing
+
+### Collecting data
+
+Raw sequencing reads were retreived from the archive folder \\share.unibz.it\AppliedMolecularEntomologyLab\ips_typographus\Illumina_16S_ITS and uploaded to the HPC:
+```bash
+ls /data/users/theaven/Ips_jam_project/raw_data/illumina/
+
+for file in $(ls /data/users/theaven/Ips_jam_project/raw_data/illumina/*/*.fastq.gz); do
+ID=$(basename $file | cut -d '_' -f1)
+mkdir $(dirname $file)/$ID
+mv $file $(dirname $file)/$ID/.
+done
+```
+Sample metadata is here: "\\share.unibz.it\AppliedMolecularEntomologyLab\ips_typographus\Illumina_16S_ITS\Illumina_Ips_sequencing_list.xlsx"
+
+## Quality Control and ASV Inference 
+
+### FastQC 
+The raw sequence reads were subjected to a quality control check using FastQC.
+```bash
+module load anaconda3
+conda activate seqkit-2.10
+seqkit stats /data/users/theaven/Ips_jam_project/raw_data/illumina/*/*/*fastq.gz
+
+for ReadDir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/illumina/*/*); do
+  Task=FastQC
+  ID=$(echo "$ReadDir" | cut -d '/' -f9 )
+  Reads=("$ReadDir"/*.fastq.gz)
+  OutDir="$ReadDir"/"$Task"
+  ExpectedOutput="$OutDir"/$(basename "${Reads[0]}" | sed 's@.fastq.gz@@g')_fastqc.html
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 9 ]; do
+    sleep 5s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_fastqc.sh "$OutDir" "${Reads[@]}")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+```
+### Cutadapt  
+Primers were removed from the reads where present using Cutadapt. Primers used by Macrogen for the 16S V3-V4 and ITS3-ITS4 region are given at https://www.macrogen-europe.com/service/metagenome-sequencing
+
+NOTE:The reads are a mix of paired and single end samples.
+```bash
+screen -r melanoneura
+for ReadDir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/illumina/16S/*); do
+  Task=CutAdapt
+  ID=$(echo "$ReadDir" | cut -d '/' -f9 | sed 's@/@_@g')
+    Reads=("$ReadDir"/*.fastq.gz)
+  OutDir="$(echo "$ReadDir" | sed 's@raw_data@qc_data@g')/"$Task""
+  Forward_Primer=CCTACGGGNGGCWGCAG
+  Reverse_Primer=GACTACHVGGGTATCTAATCC
+  ExpectedOutput="$OutDir"/$(basename "${Reads[0]}" | sed 's@.fastq.gz@.trim.fastq.gz@g')
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 9 ]; do
+    sleep 5s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_cutadapt.sh "$OutDir" "$Forward_Primer" "$Reverse_Primer" "${Reads[@]}")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+
+for ReadDir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/illumina/ITS/*); do
+  Task=CutAdapt
+  ID=$(echo "$ReadDir" | cut -d '/' -f9 | sed 's@/@_@g')
+    Reads=("$ReadDir"/*.fastq.gz)
+  OutDir="$(echo "$ReadDir" | sed 's@raw_data@qc_data@g')/"$Task""
+  Forward_Primer=GCATCGATGAAGAACGCAGC
+  Reverse_Primer=TCCTCCGCTTATTGATATGC
+  ExpectedOutput="$OutDir"/$(basename "${Reads[0]}" | sed 's@.fastq.gz@.trim.fastq.gz@g')
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 9 ]; do
+    sleep 5s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_cutadapt.sh "$OutDir" "$Forward_Primer" "$Reverse_Primer" "${Reads[@]}")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+
+seqkit stats /data/users/theaven/Ips_jam_project/qc_data/illumina/*/*/CutAdapt/*fastq.gz
+```
+### DADA2  <a name="7"></a>
+The denoiser tool DADA2 was run to model and remove error patterns from the Illumina data: read ends where quality drops were trimmed, reads with high expected error (EE), or above a max EE threshold, or with any ambiguous bases (N) were discarded. DADA2’s removeBimeraDenovo function was also used to remove chimera from the ASV table. For paired reads DADA2 also merges forward and reverse reads in the overlapping region. When F and R disagree, the merge algorithm uses quality scores to pick the most likely base or discards the read. The output of DADA2 is an Alternative Sequence Variant (ASV) table as well as filtered denoised read fastq files.
+
+DADA2 is an R package, the relavent files were downloaded:
+```bash
+for Dir in $(ls -d /data/users/theaven/Ips_jam_project/qc_data/illumina/*/*/CutAdapt); do
+    if ls "$Dir"/*_1.trim.fastq.gz 1> /dev/null 2>&1 && ls "$Dir"/*_2.trim.fastq.gz 1> /dev/null 2>&1; then
+        Out=/data/users/theaven/download_20260529/paired/$(echo "$Dir" | cut -d '/' -f9)
+        mkdir -p "$Out"
+        cp "$Dir"/*.fastq.gz "$Out"/.
+    else
+        Out=/data/users/theaven/download_20260319/single/$(echo "$Dir" | cut -d '/' -f9)
+        mkdir -p "$Out"
+        cp "$Dir"/*.fastq.gz "$Out"/.
+    fi
+done
+```
+"/data/users/theaven/download_20260529" was subseqeuntly downloaded to "C:\Users\THeaven\OneDrive - Scientific Network South Tyrol\R"
+
+**Plot reads and select appropriate truncation lengths:**
+
+DADA2 filter settings will truncate reads, a parameter is required below which length the read is discarded entirely. Plots of read quality help to determine a reasonable cuttoff, ie. before major dropoff in quality of many reads, or the median read quality is < Q25-30, or the lower percentile < Q20, mean and median should also be similar. However, shorter, more permissive lengths are prefered as other filter settings should act as a safety net to remove problem reads. However, for paired reads the truncated forward and reverse reads must still be long enough to overlap (at least 20bp) given the amplicon size or the reads cannot be merged.
+
+```R
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(c("dada2","ShortRead", "Biostrings"))
+install.packages("dplyr")
+
+library(dada2)
+library(ShortRead)
+library(Biostrings)
+library(dplyr)
+
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+#Example reads plotted:
+plotQualityProfile("download_20260529/paired/SHBB01881-1/SHBB01881-1_16S_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01881-1/SHBB01881-1_16S_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01887-2/SHBB01887-2_16S_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01887-2/SHBB01887-2_16S_2.trim.fastq.gz")  
+
+plotQualityProfile("download_20260529/paired/SHBB01891-1/SHBB01891-1_16S_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01891-1/SHBB01891-1_16S_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01909-1/SHBB01909-1_16S_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01909-1/SHBB01909-1_16S_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01888-3/SHBB01888-3_16S_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01888-3/SHBB01888-3_16S_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01882-1/SHBB01882-1_16S_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01882-1/SHBB01882-1_16S_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB0-ve/SHBB0-ve_16S_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB0-ve/SHBB0-ve_16S_2.trim.fastq.gz") 
+
+
+plotQualityProfile("download_20260529/paired/SHBB01881-1/SHBB01881-1_ITS_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01881-1/SHBB01881-1_ITS_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01887-2/SHBB01887-2_ITS_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01887-2/SHBB01887-2_ITS_2.trim.fastq.gz")  
+
+plotQualityProfile("download_20260529/paired/SHBB01891-1/SHBB01891-1_ITS_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01891-1/SHBB01891-1_ITS_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01909-1/SHBB01909-1_ITS_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01909-1/SHBB01909-1_ITS_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01888-3/SHBB01888-3_ITS_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01888-3/SHBB01888-3_ITS_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB01882-1/SHBB01882-1_ITS_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB01882-1/SHBB01882-1_ITS_2.trim.fastq.gz") 
+
+plotQualityProfile("download_20260529/paired/SHBB0-ve/SHBB0-ve_ITS_1.trim.fastq.gz") 
+plotQualityProfile("download_20260529/paired/SHBB0-ve/SHBB0-ve_ITS_2.trim.fastq.gz") 
+```
+
+DADA2 quality profile plots summarise per-cycle base quality scores across reads. The solid orange line is median quality score at each base position, the solid turquoise line is mean quality score at each position, orange dashed lines show 10th and 90th percentiles. Q20 = ~1% error rate. Q30 = ~ 0.1% error rate.
+
+Both mean (turquoise) and median (orange) are well above Q30 at all positions for every example plotted. The mean of reverse reads is slightly lower than forward reads, reverse reads are expected to be lower quality than forward reads.  
+
+![Representative DADA2 quality profile plot SHBB01881-1 ITS reverse](figures/SHBB01881-1_ITS_2.png)
+
+**Collect inputs to run DADA2 for 16S:**
+```R
+paired <- list.files(path = "download_20260529/paired", full.names = TRUE, recursive = TRUE)
+
+paired_1 <- paired[grepl("\\_16S_1\\.trim.fastq.gz$", paired)]
+paired_2 <- paired[grepl("\\_16S_2\\.trim.fastq.gz$", paired)]
+
+get_samplename <- function(x) basename(dirname(x))
+
+snF <- vapply(paired_1, get_samplename, character(1))
+snR <- vapply(paired_2, get_samplename, character(1))
+paired_samples <- intersect(snF, snR)
+paired_lookup_table <- data.frame(
+  sample = paired_samples,
+  fnF = paired_1[match(paired_samples, snF)],
+  fnR = paired_2[match(paired_samples, snR)],
+  stringsAsFactors = FALSE
+)
+```
+**Run DADA2 for 16S:**
+As the reads appear to have very good quality strict settings can be used, truncLen was set to approximate read length post trimming.
+```R
+#Parameters
+truncLen <- c(280, 280)  #Truncate reads to this length, then remove entirely
+truncQ <- 20     #Truncate at first base with quality <= truncQ (higher = more conservative | lower = more permissive)
+maxEE <- c(1,1)  #Maximum expected errors (4 for the reverse reads as these are known/expected to be lower quality)
+maxN <- 0        #Maximum allowed N bases
+rm.phix <- TRUE  #Remove PhiX reads (bacteriophage used as control in Illumina sequencing runs)
+pool <- FALSE    #Pool samples for error rate estimation (FALSE = error model is learned per sample, this is more conservative and faster/less memory | pseudo = max sensitivity)
+threads <- TRUE  #Use multithreading
+outdir <- "download_20260529/results/dada2_output_16S"
+in_df <- paired_lookup_table
+
+#Create output directory
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+
+#Filter and trim reads (paired)
+filtFs <- file.path(outdir, paste0(in_df$sample, "_F_filt.fastq.gz"))
+filtRs <- file.path(outdir, paste0(in_df$sample, "_R_filt.fastq.gz"))
+out2 <- filterAndTrim(fwd = in_df$fnF, filt = filtFs, rev = in_df$fnR, filt.rev = filtRs, truncLen = truncLen, maxN = maxN, maxEE = maxEE, truncQ = truncQ, rm.phix = rm.phix, compress = TRUE, multithread = threads)
+
+#Learn error rates, dereplicate, run DADA2 algorithm, and merge pairs
+#Learn errors separately for F and R
+errF <- learnErrors(filtFs, nbases = 5e10, multithread = threads)
+errR <- learnErrors(filtRs, nbases = 5e10, multithread = threads)
+
+#299554080 total bases in 1069836 reads from 25 samples will be used for learning the error rates. - 280,280,1,1 - 72%
+
+#Derep separately
+derepF <- derepFastq(filtFs, verbose = TRUE)
+derepR <- derepFastq(filtRs, verbose = TRUE)
+names(derepF) <- in_df$sample
+names(derepR) <- in_df$sample
+#Denoise separately
+dadaF <- dada(derepF, err = errF, pool = pool, multithread = threads)
+dadaR <- dada(derepR, err = errR, pool = pool, multithread = threads)
+#Merge pairs
+mergers <- mergePairs(dadaF, derepF, dadaR, derepR, verbose = TRUE)
+
+#Make ASV table and remove chimeras
+seqtab <- makeSequenceTable(mergers)
+seqtab.nochim <- removeBimeraDenovo(seqtab, method = "consensus", multithread = threads, verbose = TRUE)
+nonchim_reads <- rowSums(seqtab.nochim)
+chim_reads    <- rowSums(seqtab) - nonchim_reads
+chim_track <- cbind(nonchim = nonchim_reads, chimera = chim_reads, chimera_fraction = chim_reads / rowSums(seqtab))
+
+#Plot merged read lengths after chimera removal:
+asv_lengths <- nchar(colnames(seqtab.nochim))
+summary(asv_lengths)
+hist(asv_lengths, breaks=50, main="ASV lengths after chimera removal", xlab="Length (bp)")
+
+# Save results
+saveRDS(seqtab.nochim, file = file.path(outdir, "seqtab.nochim.rds"))
+write.table(seqtab.nochim, file.path(outdir, "seqtab.nochim.tsv"), sep="\t", quote=FALSE, col.names=NA)
+
+getN <- function(x) sum(getUniques(x))
+track <- cbind(input    = out2[, "reads.in"], filtered = out2[, "reads.out"], denoisedF = sapply(dadaF, getN), denoisedR = sapply(dadaR, getN), merged = sapply(mergers, function(x) sum(x$abundance)))
+rownames(track) <- in_df$sample
+write.table(track, file.path(outdir, "read_tracking.tsv"), sep="\t", quote=FALSE, col.names=NA)
+
+write.table(chim_track, file.path(outdir, "chimera_tracking.tsv"), sep="\t", quote=FALSE, col.names=NA)
+```
+Remove ASV if is not at least 1% of reads in a sample or 0.1% of reads in multiple samples. (Sequencing errors and tag-jumps almost always show up in one sample only)
+```R
+ASV <- readRDS("download_20260529/results/dada2_output_16S/seqtab.nochim.rds")
+
+prune_single_sample_low_abundance <- function(seqtab, min_rel = 0.01) {
+  prevalence <- colSums(seqtab > 0) #count how many samples each ASV appears in
+  sample_totals <- rowSums(seqtab) #find total reads per sample
+  rel_abund <- sweep(seqtab, 1, sample_totals, "/") #ASV_reads / total_reads_in_sample
+  rel_abund[is.na(rel_abund)] <- 0 #Set relative abundance to 0 where undefined
+  max_rel <- apply(rel_abund, 2, max) #Finds the highest relative abundance ASV ever reaches (for single sample ASVs there is only 1 value)
+  keep <- (max_rel >= 0.01) | (prevalence >= 2 & max_rel >= 0.001) #remove ASV if is not at least 1% of reads in a sample or 0.1% of reads in multiple samples
+  seqtab[, keep, drop = FALSE]
+}
+
+ASV_pruned <- prune_single_sample_low_abundance(ASV, min_rel = 0.01)
+
+ncol(ASV) #2291
+ncol(ASV_pruned) #381
+mean(rowSums(ASV_pruned > 0)) #63.32
+
+dir.create("download_20260529/ASVs", showWarnings = FALSE, recursive = TRUE)
+
+saveRDS(ASV_pruned, file = file.path("download_20260529/ASVs/ASV_asv_16s.rds"))
+write.table(ASV_pruned, file.path("download_20260529/ASVs/ASV_asv_16s.tsv"), sep="\t", quote=FALSE, col.names=NA)
+
+# seqtab_filt: samples x ASVs
+asv_seqs <- colnames(ASV_pruned)
+asv_headers <- paste0("ASV", seq_along(asv_seqs))
+dna <- Biostrings::DNAStringSet(asv_seqs)
+names(dna) <- asv_headers
+Biostrings::writeXStringSet(dna, "download_20260529/ASVs/ASVs_16s.fasta")
+write.csv(data.frame(ASV=asv_headers, Sequence=asv_seqs), "download_20260529/ASVs/ASV_16s_id_map.csv", row.names = FALSE)
+```
+**Collect inputs to run DADA2 for ITS:**
+```R
+paired <- list.files(path = "download_20260529/paired", full.names = TRUE, recursive = TRUE)
+
+paired_1 <- paired[grepl("\\_ITS_1\\.trim.fastq.gz$", paired)]
+paired_2 <- paired[grepl("\\_ITS_2\\.trim.fastq.gz$", paired)]
+
+get_samplename <- function(x) basename(dirname(x))
+
+snF <- vapply(paired_1, get_samplename, character(1))
+snR <- vapply(paired_2, get_samplename, character(1))
+paired_samples <- intersect(snF, snR)
+paired_lookup_table <- data.frame(
+  sample = paired_samples,
+  fnF = paired_1[match(paired_samples, snF)],
+  fnR = paired_2[match(paired_samples, snR)],
+  stringsAsFactors = FALSE
+)
+```
+**Run DADA2 for ITS:**
+As the reads appear to have very good quality strict settings can be used, truncLen was set to approximate read length post trimming.
+```R
+#Parameters
+truncLen <- c(280, 280)  #Truncate reads to this length, then remove entirely
+truncQ <- 20     #Truncate at first base with quality <= truncQ (higher = more conservative | lower = more permissive)
+maxEE <- c(1,1)  #Maximum expected errors (4 for the reverse reads as these are known/expected to be lower quality)
+maxN <- 0        #Maximum allowed N bases
+rm.phix <- TRUE  #Remove PhiX reads (bacteriophage used as control in Illumina sequencing runs)
+pool <- FALSE    #Pool samples for error rate estimation (FALSE = error model is learned per sample, this is more conservative and faster/less memory | pseudo = max sensitivity)
+threads <- TRUE  #Use multithreading
+outdir <- "download_20260529/results/dada2_output_ITS"
+in_df <- paired_lookup_table
+
+#Create output directory
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+
+#Filter and trim reads (paired)
+filtFs <- file.path(outdir, paste0(in_df$sample, "_F_filt.fastq.gz"))
+filtRs <- file.path(outdir, paste0(in_df$sample, "_R_filt.fastq.gz"))
+out2 <- filterAndTrim(fwd = in_df$fnF, filt = filtFs, rev = in_df$fnR, filt.rev = filtRs, truncLen = truncLen, maxN = maxN, maxEE = maxEE, truncQ = truncQ, rm.phix = rm.phix, compress = TRUE, multithread = threads)
+
+#Learn error rates, dereplicate, run DADA2 algorithm, and merge pairs
+#Learn errors separately for F and R
+errF <- learnErrors(filtFs, nbases = 5e10, multithread = threads)
+errR <- learnErrors(filtRs, nbases = 5e10, multithread = threads)
+
+#357098560 total bases in 1275352 reads from 25 samples will be used for learning the error rates. - 280,280,1,1 - 77%
+
+#Derep separately
+derepF <- derepFastq(filtFs, verbose = TRUE)
+derepR <- derepFastq(filtRs, verbose = TRUE)
+names(derepF) <- in_df$sample
+names(derepR) <- in_df$sample
+#Denoise separately
+dadaF <- dada(derepF, err = errF, pool = pool, multithread = threads)
+dadaR <- dada(derepR, err = errR, pool = pool, multithread = threads)
+#Merge pairs
+mergers <- mergePairs(dadaF, derepF, dadaR, derepR, verbose = TRUE)
+
+#Make ASV table and remove chimeras
+seqtab <- makeSequenceTable(mergers)
+seqtab.nochim <- removeBimeraDenovo(seqtab, method = "consensus", multithread = threads, verbose = TRUE)
+nonchim_reads <- rowSums(seqtab.nochim)
+chim_reads    <- rowSums(seqtab) - nonchim_reads
+chim_track <- cbind(nonchim = nonchim_reads, chimera = chim_reads, chimera_fraction = chim_reads / rowSums(seqtab))
+
+#Plot merged read lengths after chimera removal:
+asv_lengths <- nchar(colnames(seqtab.nochim))
+summary(asv_lengths)
+hist(asv_lengths, breaks=50, main="ASV lengths after chimera removal", xlab="Length (bp)")
+
+# Save results
+saveRDS(seqtab.nochim, file = file.path(outdir, "seqtab.nochim.rds"))
+write.table(seqtab.nochim, file.path(outdir, "seqtab.nochim.tsv"), sep="\t", quote=FALSE, col.names=NA)
+
+getN <- function(x) sum(getUniques(x))
+track <- cbind(input    = out2[, "reads.in"], filtered = out2[, "reads.out"], denoisedF = sapply(dadaF, getN), denoisedR = sapply(dadaR, getN), merged = sapply(mergers, function(x) sum(x$abundance)))
+rownames(track) <- in_df$sample
+write.table(track, file.path(outdir, "read_tracking.tsv"), sep="\t", quote=FALSE, col.names=NA)
+
+write.table(chim_track, file.path(outdir, "chimera_tracking.tsv"), sep="\t", quote=FALSE, col.names=NA)
+```
+Remove ASV if is not at least 1% of reads in a sample or 0.1% of reads in multiple samples. (Sequencing errors and tag-jumps almost always show up in one sample only)
+```R
+ASV <- readRDS("download_20260529/results/dada2_output_ITS/seqtab.nochim.rds")
+
+prune_single_sample_low_abundance <- function(seqtab, min_rel = 0.01) {
+  prevalence <- colSums(seqtab > 0) #count how many samples each ASV appears in
+  sample_totals <- rowSums(seqtab) #find total reads per sample
+  rel_abund <- sweep(seqtab, 1, sample_totals, "/") #ASV_reads / total_reads_in_sample
+  rel_abund[is.na(rel_abund)] <- 0 #Set relative abundance to 0 where undefined
+  max_rel <- apply(rel_abund, 2, max) #Finds the highest relative abundance ASV ever reaches (for single sample ASVs there is only 1 value)
+  keep <- (max_rel >= 0.01) | (prevalence >= 2 & max_rel >= 0.001) #remove ASV if is not at least 1% of reads in a sample or 0.1% of reads in multiple samples
+  seqtab[, keep, drop = FALSE]
+}
+
+ASV_pruned <- prune_single_sample_low_abundance(ASV, min_rel = 0.01)
+
+ncol(ASV) #1099
+ncol(ASV_pruned) #213
+mean(rowSums(ASV_pruned > 0)) #50.52
+
+dir.create("download_20260529/ASVs", showWarnings = FALSE, recursive = TRUE)
+
+saveRDS(ASV_pruned, file = file.path("download_20260529/ASVs/ASV_asv_its.rds"))
+write.table(ASV_pruned, file.path("download_20260529/ASVs/ASV_asv_its.tsv"), sep="\t", quote=FALSE, col.names=NA)
+
+# seqtab_filt: samples x ASVs
+asv_seqs <- colnames(ASV_pruned)
+asv_headers <- paste0("ASV", seq_along(asv_seqs))
+dna <- Biostrings::DNAStringSet(asv_seqs)
+names(dna) <- asv_headers
+Biostrings::writeXStringSet(dna, "download_20260529/ASVs/ASVs_its.fasta")
+write.csv(data.frame(ASV=asv_headers, Sequence=asv_seqs), "download_20260529/ASVs/ASV_its_id_map.csv", row.names = FALSE)
+```
+### QIIME - plot
+Plot rarefaction curve with qiime
+
+Prepare inputs DADA2(R) -> QIIME2(HPC):
+
+**16S**
+```bash
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+
+ASV_dir=/data/users/theaven/Ips_jam_project/asvs/ASVs
+
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/make_qiime2_inputs.py \
+  --counts "$ASV_dir"/ASV_asv_16s.tsv \
+  --map "$ASV_dir"/ASV_16s_id_map.csv \
+  --out-dir "$ASV_dir"/qiime_inputs \
+  --out-prefix qiime_inputs_16s_
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i "$ASV_dir"/qiime_inputs/qiime_inputs_16s_ASV_table.tsv \
+  -o "$ASV_dir"/qiime_inputs/ASV_table_16s.biom \
+  --table-type="OTU table" \
+  --to-hdf5
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools import \
+  --type 'FeatureTable[Frequency]' \
+  --input-path "$ASV_dir"/qiime_inputs/ASV_table_16s.biom \
+  --output-path "$ASV_dir"/qiime_inputs/table_16s.qza
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools import \
+  --type 'FeatureData[Sequence]' \
+  --input-path "$ASV_dir"/ASVs_16s.fasta \
+  --output-path "$ASV_dir"/rep-seqs_16s.qza
+
+#Input metadata:
+echo -e "#SampleID" > "$ASV_dir"/sample-metadata.tsv
+head -n 1 "$ASV_dir"/qiime_inputs/qiime_inputs_16s_ASV_table.tsv | cut -f2- | tr '\t' '\n' >> "$ASV_dir"/sample-metadata.tsv
+#Download, input metadata, upload
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/rep-seqs_16s.qza \
+  --output-path "$ASV_dir"/rep-seqs_16s-fasta
+```
+Plot
+
+```bash
+#Build tree
+srun -p bioagri  -c 4 --mem 64G --pty bash
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+ASV_dir=/data/users/theaven/Ips_jam_project/asvs/ASVs
+mkdir -p "$ASV_dir"/tmp
+TMPDIR="$ASV_dir"/tmp \
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime alignment mafft \
+  --i-sequences "$ASV_dir"/rep-seqs_16s.qza \
+  --o-alignment "$ASV_dir"/aligned-rep-seqs_16s.qza \
+  --p-n-threads 4
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime alignment mask \
+  --i-alignment "$ASV_dir"/aligned-rep-seqs_16s.qza \
+  --o-masked-alignment "$ASV_dir"/masked-aligned-rep-seqs_16s.qza 
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime phylogeny fasttree \
+  --i-alignment "$ASV_dir"/masked-aligned-rep-seqs_16s.qza \
+  --o-tree "$ASV_dir"/unrooted-tree_16s.qza
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime phylogeny midpoint-root \
+  --i-tree "$ASV_dir"/unrooted-tree_16s.qza \
+  --o-rooted-tree "$ASV_dir"/rooted-tree_16s.qza
+
+#Find sequencing depth cuttoff
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime feature-table summarize \
+  --i-table "$ASV_dir"/qiime_inputs/table_16s.qza \
+  --o-visualization "$ASV_dir"/table_16s-summary.qzv \
+  --m-sample-metadata-file "$ASV_dir"/sample-metadata.tsv
+#0 samples are below 10,000 depth
+#1 samples are below 20,000
+#5 below 30,000
+#14 below 40,000
+
+#Plot rarefaction curve
+awk 'NR>1 {for(i=2;i<=NF;i++) if($i>max) max=$i} END{print max}' "$ASV_dir"/ASV_asv_16s.tsv #43367
+awk 'NR==1 {next} {sum=0; for(i=2;i<=NF;i++) sum+=$i; print $1, sum}' "$ASV_dir"/ASV_asv_16s.tsv | sort -k2 -n | sort -k2 -n | sort -k2 -n | head -3 #SHBB0-ve 15112, SHBB01898-1 22723, SHBB01915-1 24990
+awk 'NR==1 {next} {sum=0; for(i=2;i<=NF;i++) sum+=$i; print $1, sum}' "$ASV_dir"/ASV_asv_16s.tsv | sort -k2 -n | sort -k2 -n | sort -k2 -n | tail -1 #SHBB01888-1 63031
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime diversity alpha-rarefaction \
+  --i-table "$ASV_dir"/qiime_inputs/table_16s.qza \
+  --i-phylogeny "$ASV_dir"/rooted-tree_16s.qza \
+  --p-max-depth 15000 \
+  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+  --o-visualization "$ASV_dir"/alpha-rarefaction_16s.qzv 
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime diversity alpha-rarefaction \
+  --i-table "$ASV_dir"/qiime_inputs/table_16s.qza \
+  --i-phylogeny "$ASV_dir"/rooted-tree_16s.qza \
+  --p-max-depth 30000 \
+  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+  --o-visualization "$ASV_dir"/alpha-rarefaction-30000_16s.qzv 
+```
+![Rarefaction curves for ITS seqeunces](figures/rarefaction_16s.png)
+
+**ITS**
+```bash
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+
+ASV_dir=/data/users/theaven/Ips_jam_project/asvs/ASVs
+
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/make_qiime2_inputs.py \
+  --counts "$ASV_dir"/ASV_asv_its.tsv \
+  --map "$ASV_dir"/ASV_its_id_map.csv \
+  --out-dir "$ASV_dir"/qiime_inputs \
+  --out-prefix qiime_inputs_its_
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i "$ASV_dir"/qiime_inputs/qiime_inputs_its_ASV_table.tsv \
+  -o "$ASV_dir"/qiime_inputs/ASV_table_its.biom \
+  --table-type="OTU table" \
+  --to-hdf5
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools import \
+  --type 'FeatureTable[Frequency]' \
+  --input-path "$ASV_dir"/qiime_inputs/ASV_table_its.biom \
+  --output-path "$ASV_dir"/qiime_inputs/table_its.qza
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools import \
+  --type 'FeatureData[Sequence]' \
+  --input-path "$ASV_dir"/ASVs_its.fasta \
+  --output-path "$ASV_dir"/rep-seqs_its.qza
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/rep-seqs_its.qza \
+  --output-path "$ASV_dir"/rep-seqs_its-fasta
+```
+Plot
+
+```bash
+#Build tree
+srun -p bioagri  -c 4 --mem 64G --pty bash
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+ASV_dir=/data/users/theaven/Ips_jam_project/asvs/ASVs
+mkdir -p "$ASV_dir"/tmp
+TMPDIR="$ASV_dir"/tmp \
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime alignment mafft \
+  --i-sequences "$ASV_dir"/rep-seqs_its.qza \
+  --o-alignment "$ASV_dir"/aligned-rep-seqs_its.qza \
+  --p-n-threads 4
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime alignment mask \
+  --i-alignment "$ASV_dir"/aligned-rep-seqs_its.qza \
+  --o-masked-alignment "$ASV_dir"/masked-aligned-rep-seqs_its.qza 
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime phylogeny fasttree \
+  --i-alignment "$ASV_dir"/masked-aligned-rep-seqs_its.qza \
+  --o-tree "$ASV_dir"/unrooted-tree_its.qza
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime phylogeny midpoint-root \
+  --i-tree "$ASV_dir"/unrooted-tree_its.qza \
+  --o-rooted-tree "$ASV_dir"/rooted-tree_its.qza
+
+#Find sequencing depth cuttoff
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime feature-table summarize \
+  --i-table "$ASV_dir"/qiime_inputs/table_its.qza \
+  --o-visualization "$ASV_dir"/table_its-summary.qzv \
+  --m-sample-metadata-file "$ASV_dir"/sample-metadata.tsv
+#0 samples are below 10,000 depth
+#1 samples are below 20,000
+#4 below 30,000
+#8 below 40,000
+
+#Plot rarefaction curve
+awk 'NR>1 {for(i=2;i<=NF;i++) if($i>max) max=$i} END{print max}' "$ASV_dir"/ASV_asv_its.tsv #41027
+awk 'NR==1 {next} {sum=0; for(i=2;i<=NF;i++) sum+=$i; print $1, sum}' "$ASV_dir"/ASV_asv_its.tsv | sort -k2 -n | sort -k2 -n | sort -k2 -n | head -3 #SHBB01895-1 16411, SHBB0-ve 20729, SHBB01915-1 21150
+awk 'NR==1 {next} {sum=0; for(i=2;i<=NF;i++) sum+=$i; print $1, sum}' "$ASV_dir"/ASV_asv_its.tsv | sort -k2 -n | sort -k2 -n | sort -k2 -n | tail -1 #SHBB01898-1 63188
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime diversity alpha-rarefaction \
+  --i-table "$ASV_dir"/qiime_inputs/table_its.qza \
+  --i-phylogeny "$ASV_dir"/rooted-tree_its.qza \
+  --p-max-depth 16400 \
+  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+  --o-visualization "$ASV_dir"/alpha-rarefaction_its.qzv 
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime diversity alpha-rarefaction \
+  --i-table "$ASV_dir"/qiime_inputs/table_its.qza \
+  --i-phylogeny "$ASV_dir"/rooted-tree_its.qza \
+  --p-max-depth 30000 \
+  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+  --o-visualization "$ASV_dir"/alpha-rarefaction-30000_its.qzv 
+```
+![Rarefaction curves for ITS seqeunces](figures/rarefaction-its.png)
+
+## Taxonomy Assignment <a name="9"></a>
+
+Ready-made IDTAXA training set is publically available for SILVA SSU and was downloaded from https://www2.decipher.codes/Downloads.html - Accessed 07/06/2026 - "   SILVA SSU r138.2 (modified) " and "   UNITE 2025 (unmodified) "
+
+### IDTAXA <a name="10"></a>
+
+IDTAXA (DECIPHER package in R) - probabilistic sequence classification, model-based learning - usually more accurate and conservative than BLAST or naive Bayes. IDTAXA does not require trimming and handles full-length sequences correctly. IDTAXA is slower than QIIME2 NB, but usually much more accurate. If trained on full-length, IDTAXA often backs off to a safer rank rather than confidently guessing too deep.
+
+NOTE: the 'species' data in SILVA can be questionable as users list host organism in this field or write things like 'metagenome'. We will need to be carefull when interpreting the Assignment results at the species level. Also, for some entries species is given but not all the higher level taxa, this can cause problems because IDTAXA likes unique species to have only one taxonomic path. Other entries like Incertae Sedis also had to be made unambiguous. I have therefore changed every column to give the full ':' seperated taxonomic path to that level in order to bypass this problem, this tranformation will presumably need to be reversed in the outputs of IDTAXA in order to make them readable. 
+
+**16S**
+
+```R
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(c("DECIPHER","stringr", "Biostrings"))
+
+library(DECIPHER)
+library(Biostrings)
+library(stringr)
+
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+
+load("SILVA_SSU_r138_2_2024.RData")
+
+SSU_trainingSet <- trainingSet
+
+SSU_ASVs <- readDNAStringSet("download_20260529/ASVs/ASVs_16s.fasta")
+
+SSU_tax_idtaxa <- IdTaxa(
+  SSU_ASVs,
+  SSU_trainingSet,
+  strand = "both",
+  bootstraps = 100 , #default - maximum number of bootstrap replicates to perform for each sequence
+  processors = NULL, #Use all available cores
+  threshold = 60 ,  #% of bootstraps supporting assignment, raise to 70–80 for fewer false positives
+  verbose = TRUE 
+)
+
+# Convert to table
+target_ranks <- c("root","domain","phylum","class","order","family","genus","species")
+
+extract_tax <- function(x) {
+  out <- setNames(rep(NA_character_, length(target_ranks)), target_ranks)
+  if (!is.null(x$rank) && length(x$rank)) {
+    idx <- match(tolower(x$rank), target_ranks)
+    keep <- !is.na(idx)
+    out[idx[keep]] <- x$taxon[keep]
+  }
+  out
+}
+
+SSU_tax_tab <- t(vapply(SSU_tax_idtaxa, extract_tax,
+                    FUN.VALUE = setNames(rep(NA_character_, length(target_ranks)), target_ranks)))
+SSU_tax_tab <- as.data.frame(SSU_tax_tab, stringsAsFactors = FALSE)
+rownames(SSU_tax_tab) <- names(SSU_ASVs)
+write.table(SSU_tax_tab, file = "download_20260529/ASVs/SSU_tax_tab_corrected_16s.tsv", sep = "\t", row.names = TRUE, quote = FALSE, na = "NA")
+
+#convert to qiime format for plotting
+tax_df <- data.frame(
+  Feature.ID = names(SSU_tax_idtaxa),
+  Taxon = sapply(SSU_tax_idtaxa, function(x) {
+    # Skip the first rank (root)
+    ranks <- c("k__", "p__", "c__", "o__", "f__", "g__", "s__")
+    paste0(ranks, x$taxon[-1])[1:length(ranks)] |> paste(collapse = "; ")
+  }),
+  Confidence = sapply(SSU_tax_idtaxa, function(x) {
+    min(x$confidence, na.rm = TRUE) / 100
+  })
+)
+
+write.table(
+  tax_df,
+  "download_20260529/ASVs/idtaxa_taxonomy_16s.tsv",
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
+```
+Curate the taxonomy file: replace g_endosymbionts with g_unclassified_f, replace Incertae Sedis entries with x_unclassified_x, propogate x_unclassified_x entries down ranks. ->  idtaxa_taxonomy2.tsv
+
+**ITS**
+
+```R
+load("UNITE_v2025.RData")
+
+ITS_trainingSet <- trainingSet
+
+ITS_ASVs <- readDNAStringSet("download_20260529/ASVs/ASVs_its.fasta")
+
+ITS_tax_idtaxa <- IdTaxa(
+  ITS_ASVs,
+  ITS_trainingSet,
+  strand = "both",
+  bootstraps = 100 , #default - maximum number of bootstrap replicates to perform for each sequence
+  processors = NULL, #Use all available cores
+  threshold = 60 ,  #% of bootstraps supporting assignment, raise to 70–80 for fewer false positives
+  verbose = TRUE 
+)
+
+ITS_tax_tab <- t(vapply(ITS_tax_idtaxa, extract_tax,
+                    FUN.VALUE = setNames(rep(NA_character_, length(target_ranks)), target_ranks)))
+ITS_tax_tab <- as.data.frame(ITS_tax_tab, stringsAsFactors = FALSE)
+rownames(ITS_tax_tab) <- names(ITS_ASVs)
+write.table(ITS_tax_tab, file = "download_20260529/ASVs/ITS_tax_tab_corrected_its.tsv", sep = "\t", row.names = TRUE, quote = FALSE, na = "NA")
+
+#convert to qiime format for plotting
+tax_df2 <- data.frame(
+  Feature.ID = names(ITS_tax_idtaxa),
+  Taxon = sapply(ITS_tax_idtaxa, function(x) {
+    # Skip the first rank (root)
+    ranks <- c("k__", "p__", "c__", "o__", "f__", "g__", "s__")
+    paste0(ranks, x$taxon[-1])[1:length(ranks)] |> paste(collapse = "; ")
+  }),
+  Confidence = sapply(ITS_tax_idtaxa, function(x) {
+    min(x$confidence, na.rm = TRUE) / 100
+  })
+)
+
+write.table(
+  tax_df2,
+  "download_20260529/ASVs/idtaxa_taxonomy_its.tsv",
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
+```
+### Curate
+
+Curate the taxonomy file: replace g_endosymbionts with g_unclassified_f, replace Incertae Sedis entries with x_unclassified_x, propogate x_unclassified_x entries down ranks. 
+Data entry error for ASV370 - repeat
+```bash
+ASV_dir=/data/users/theaven/Ips_jam_project/asvs/ASVs
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+
+#import
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools import \
+  --type 'FeatureData[Taxonomy]' \
+  --input-path "$ASV_dir"/idtaxa_taxonomy_16s.tsv \
+  --output-path "$ASV_dir"/idtaxa_taxonomy_16s.qza \
+  --input-format HeaderlessTSVTaxonomyFormat
+
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools import \
+  --type 'FeatureData[Taxonomy]' \
+  --input-path "$ASV_dir"/idtaxa_taxonomy_its.tsv \
+  --output-path "$ASV_dir"/idtaxa_taxonomy_its.qza \
+  --input-format HeaderlessTSVTaxonomyFormat
+
+#remove organelle and plant hits
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa filter-table \
+  --i-table "$ASV_dir"/qiime_inputs/table_16s.qza \
+  --i-taxonomy "$ASV_dir"/idtaxa_taxonomy_16s.qza \
+  --p-exclude mitochondria,chloroplast,Viridiplantae \
+  --o-filtered-table "$ASV_dir"/table-no-mitochondria-chloroplast_16s.qza
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa filter-table \
+  --i-table "$ASV_dir"/qiime_inputs/table_its.qza \
+  --i-taxonomy "$ASV_dir"/idtaxa_taxonomy_its.qza \
+  --p-exclude mitochondria,chloroplast,Viridiplantae \
+  --o-filtered-table "$ASV_dir"/table-no-mitochondria-chloroplast_its.qza
+
+#collapse to genus/family level:
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa collapse \
+  --i-table "$ASV_dir"/table-no-mitochondria-chloroplast_its.qza \
+  --i-taxonomy "$ASV_dir"/idtaxa_taxonomy_its.qza \
+  --p-level 6 \
+  --o-collapsed-table genus-table_its.qza
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path genus-table_its.qza \
+  --output-path genus_export_its
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i genus_export_its/feature-table.biom \
+  -o genus-table_its.tsv \
+  --to-tsv
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa collapse \
+  --i-table "$ASV_dir"/table-no-mitochondria-chloroplast_its.qza \
+  --i-taxonomy "$ASV_dir"/idtaxa_taxonomy_its.qza \
+  --p-level 5 \
+  --o-collapsed-table family-table_its.qza
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path family-table_its.qza \
+  --output-path family_export_its
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i family_export_its/feature-table.biom \
+  -o family-table_its.tsv \
+  --to-tsv
+
+```
+
+### Plot
+
+**16S**
+
+```bash
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa barplot \
+  --i-table "$ASV_dir"/table-no-mitochondria-chloroplast_16s.qza \
+  --i-taxonomy "$ASV_dir"/idtaxa_taxonomy_16s.qza \
+  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+  --o-visualization "$ASV_dir"/idtaxa-barplot_16s.qzv
+```
+![Relative abundance plots for ITS seqeunces](figures/bar-16s.png)
+
+Download to plot with R:
+```bash
+down_dir=/data/users/theaven/Ips_jam_project/down_20260609
+mkdir "$down_dir"
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/table-no-mitochondria-chloroplast_16s.qza \
+  --output-path "$ASV_dir"/exported-feature-table_16s
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i "$ASV_dir"/exported-feature-table_16s/feature-table.biom \
+  -o "$down_dir"/feature-table_16s.tsv \
+  --to-tsv
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/idtaxa_taxonomy_16s.qza \
+  --output-path "$down_dir"/exported-taxonomy_16s
+
+cp /data/users/theaven/Ips_jam_project/asvs/ASVs/sample-metadata.tsv "$down_dir"/
+
+###
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/qiime_inputs/table_16s.qza \
+  --output-path "$ASV_dir"/exported-feature-table_16sc
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i "$ASV_dir"/exported-feature-table_16sc/feature-table.biom \
+  -o "$down_dir"/feature-table_16sc.tsv \
+  --to-tsv
+```
+
+Abundance plot:
+```R
+install.packages(c("tidyverse"))
+install.packages("BiocManager")
+install.packages("ggrepel")
+BiocManager::install("phyloseq")
+BiocManager::install("microbiome")
+install.packages("ComplexUpset")
+install.packages("pheatmap")
+library(ComplexUpset)
+library(phyloseq)
+library(tidyverse)
+library(readr)
+library(tibble)
+library(ggplot2)
+library(tidyr)
+library(RColorBrewer)
+library(ggrepel)
+library(pheatmap)
+
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+# Load table
+otu <- read.table("down_20260609/feature-table_16sc.tsv", header=TRUE, row.names=1, sep="\t", comment.char="")
+otu <- as.matrix(otu)
+colnames(otu) <- gsub("\\.", "-", colnames(otu))
+
+# Load metadata
+meta <- read_tsv(
+  "down_20260609/sample-metadata.tsv",
+  comment = "",  
+  show_col_types = FALSE
+)
+meta <- column_to_rownames(meta, var = "#SampleID")
+
+tax1 <- read.table("down_20260609/exported-taxonomy_16s/taxonomy.tsv", 
+                  header = TRUE, 
+                  sep = "\t", 
+                  row.names = 1)
+tax_split <- tax1 %>%
+  separate(Taxon, 
+           into = c("Kingdom","Phylum","Class","Order","Family","Genus","Species"), 
+           sep = ";", 
+           fill = "right")
+
+# Create objects
+OTU <- otu_table(otu, taxa_are_rows=TRUE)
+SAM <- sample_data(meta)
+TAX <- tax_table(as.matrix(tax_split))
+ps <- phyloseq(OTU, SAM, TAX)
+
+tax_table(ps) <- apply(tax_table(ps), 2, trimws)
+tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
+
+ps_genus <- tax_glom(ps, taxrank = "Genus")
+
+ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+
+df <- psmelt(ps_rel)
+
+taxa_abund <- tapply(df$Abundance, df$Genus, sum)
+
+top10 <- names(sort(taxa_abund, decreasing = TRUE))[1:10]
+
+keep_taxa <- unique(c(top10))
+
+df$Genus <- as.character(df$Genus)
+
+df$Genus[!df$Genus %in% keep_taxa] <- "Other"
+
+all_taxa <- unique(df$Genus)
+
+auto_taxa <- setdiff(all_taxa, "Other")
+
+auto_cols <- setNames(c(
+  "darkblue",  "#008000", "sienna3", "orange",
+  "deeppink4",  "skyblue3", "red3"
+  , "maroon3", "wheat3", "yellow"
+), auto_taxa)
+
+other_col <- c("Other" = "grey80")
+
+final_cols <- c(auto_cols, other_col)
+
+df$Genus <- factor(df$Genus, levels = names(final_cols))
+
+#remove sequencing blank from the plot
+df_sub <- subset(df, treatment != "blank")
+
+# create hierarchical grouping key
+df_sub$treatment <- as.character(df_sub$treatment)
+df_sub$Group <- paste(df_sub$treatment, df_sub$Sample, sep = " ")
+df_sub$Label <- paste(df_sub$treatment, df_sub$Sample)
+
+df_sub$Group <- factor(df_sub$Group, levels = unique(df_sub$Group))
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+df_sub <- df_sub[order(df_sub$treatment, df_sub$Sample), ]
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = final_cols) +
+  scale_x_discrete(drop = FALSE) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
+```
+Alpha diversity:
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson", "Chao1", "Observed"))
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta[meta$treatment != "blank", , drop = FALSE]  
+ps_f <- prune_samples(rownames(meta_f), ps)
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  scale_fill_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.07682 - borderline
+#Insecticide - p-value = 0.7613 - normal
+#Microsap - p-value = 0.03346 - not normal
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.075   -          
+#Microsap    0.382   0.075   
+```
+beta diversity:
+
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.00600 0.0029997 0.1817    999  0.818
+#Residuals 21 0.34679 0.0165138
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.6544 0.07565 0.8593  0.675
+#Residual 21   7.9968 0.92435              
+#Total    23   8.6512 1.00000    
+#No significant difference in community composition between treatments, treatment explains only ~7.6% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.005156 0.0025779 0.7559    999  0.476
+#Residuals 21 0.071622 0.0034106
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs    R2      F Pr(>F)  
+#Model     2   0.9574 0.116 1.3779  0.013 *
+#Residual 21   7.2961 0.884                
+#Total    23   8.2535 1.000  
+#Significant difference in community composition between treatments, treatment explains ~11.6% of variation     
+```
+Treatments affect which taxa are present/absent, not their relative abundances - community membership shifts but dominant taxa abundances are stable. Treatments do not strongly reshape dominant community structure, but they do cause taxa turnover (gains/losses of rarer taxa) - hidden signal in rare taxa.
+
+Presence/abscence - bubble plot:
+```R
+#build matrix for Genus level
+ps_f_genus <- tax_glom(ps_f, taxrank = "Genus")
+ps_f_genus <- filter_taxa(ps_f_genus, function(x) sum(x) > 0, TRUE)
+
+mat <- as(otu_table(ps_f_genus), "matrix")
+if (taxa_are_rows(ps_f_genus)) {
+  mat <- t(mat)
+}
+
+pa_mat <- (mat > 0) * 1
+
+meta_mat <- meta_f[match(rownames(pa_mat), rownames(meta_f)), , drop = FALSE]
+
+group <- meta_mat$treatment
+groups <- unique(group)
+stopifnot(all(rownames(pa_mat) == rownames(meta_mat)))
+
+#Pairwise Fisher tests (ALL pairs)
+pair_list <- combn(groups, 2, simplify = FALSE)
+
+pairwise_p <- lapply(pair_list, function(grp) {
+  g1 <- grp[1]
+  g2 <- grp[2]
+  idx <- group %in% c(g1, g2)
+  apply(pa_mat[idx, , drop = FALSE], 2, function(x) {
+    tab <- table(x, group[idx])
+    if (nrow(tab) < 2 || ncol(tab) < 2) return(NA)
+    if (all(tab == 0)) return(NA)
+    fisher.test(tab)$p.value
+  })
+})
+
+names(pairwise_p) <- sapply(pair_list, paste, collapse = "_vs_")
+
+pairwise_p_adj <- lapply(pairwise_p, function(p) {
+  p.adjust(p, method = "BH")
+})
+
+#Extract significant taxa (ANY comparison)
+sig_taxa <- unique(unlist(lapply(pairwise_p_adj, function(p) {
+  names(p)[which(p < 0.05 & !is.na(p))]
+})))
+
+prev_list <- lapply(groups, function(g) {
+  colMeans(pa_mat[group == g, sig_taxa, drop = FALSE])
+})
+names(prev_list) <- groups
+
+tax <- as.data.frame(tax_table(ps_f_genus))
+tax_labels <- tax$Genus
+names(tax_labels) <- rownames(tax)
+
+df <- data.frame(
+  Taxon = sig_taxa,
+  Label = tax_labels[sig_taxa]
+)
+
+for (g in groups) {
+  df[[paste0(g, "_prev")]] <- prev_list[[g]]
+}
+
+#Long format for plotting
+df_long <- pivot_longer(
+  df,
+  cols = ends_with("_prev"),
+  names_to = "Group",
+  values_to = "Prevalence"
+)
+
+df_long$Group <- gsub("_prev", "", df_long$Group)
+
+df_long$Label[is.na(df_long$Label)] <- df_long$Taxon
+
+ggplot(df_long, aes(
+  x = Group,
+  y = Label,
+  size = Prevalence,
+  color = Group
+)) +
+  geom_point(alpha = 0.85) +
+  scale_size(range = c(2, 10)) +
+  theme_classic(base_size = 14) +
+  labs(
+    x = NULL,
+    y = "Genus",
+    size = "Prevalence",
+    color = "Group",
+    title = "Significant taxa (pairwise Fisher tests, FDR < 0.05)"
+  )
+```
+No significant taxa - hard with only 8 reps
+
+Presence/abscence + adundance - heatmap:
+```R
+tax_tab <- as.data.frame(tax_table(ps_f_genus))
+
+tax_names <- tax_tab$Genus
+tax_names[is.na(tax_names) | tax_names == ""] <- "Unknown"
+tax_names <- make.unique(tax_names)
+
+mat_asv <- mat
+colnames(mat_asv) <- tax_names
+
+mat_genus_rel <- sweep(mat_asv, 1, rowSums(mat_asv), "/")
+mat_genus_rel_log <- log10(mat_genus_rel + 1e-6)
+
+#Order samples
+meta_mat <- meta[rownames(mat_genus_rel_log), , drop = FALSE ]
+
+ord <- order(meta_mat$treatment)
+
+mat_ordered <- mat_genus_rel_log[ord, ]
+meta_ordered <- meta_mat[ord, , drop = FALSE  ]
+
+# --- Define colors: 0 = white, then blue → red ---
+# Avoid including 0 in gradient
+nonzero_vals <- mat_ordered[mat_ordered > 0]
+
+# --- Row annotations ---
+annotation_row <- data.frame(
+  Treatment = meta_ordered$treatment
+)
+
+rownames(annotation_row) <- rownames(mat_ordered)
+
+#Optional: gaps
+gaps <- cumsum(table(meta_ordered$treatment))
+
+pheatmap(
+  mat_ordered,
+  color = colorRampPalette(c("white", "blue", "red"))(100),
+  breaks = seq(
+    min(mat_ordered, na.rm = TRUE),
+    max(mat_ordered, na.rm = TRUE),
+    length.out = 101
+  ),
+  cluster_rows = FALSE,
+  cluster_cols = TRUE,
+  annotation_row = annotation_row,
+  gaps_row = gaps,
+  border_color = "grey90",
+  fontsize_col = 6
+)
+```
+
+**ITS**
+
+```bash
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa barplot \
+  --i-table "$ASV_dir"/table-no-mitochondria-chloroplast_its.qza \
+  --i-taxonomy "$ASV_dir"/idtaxa_taxonomy_its.qza \
+  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+  --o-visualization "$ASV_dir"/idtaxa-barplot_its.qzv
+```
+![Relative abundance plots for ITS seqeunces](figures/bar-its.png)
+
+Download to plot with R:
+```bash
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/table-no-mitochondria-chloroplast_its.qza \
+  --output-path "$ASV_dir"/exported-feature-table_its
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i "$ASV_dir"/exported-feature-table_its/feature-table.biom \
+  -o "$down_dir"/feature-table_its.tsv \
+  --to-tsv
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/idtaxa_taxonomy_its.qza \
+  --output-path "$down_dir"/exported-taxonomy_its
+```
+```R
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+# Load table
+otu <- read.table("down_20260609/feature-table_its.tsv", header=TRUE, row.names=1, sep="\t", comment.char="")
+otu <- as.matrix(otu)
+colnames(otu) <- gsub("\\.", "-", colnames(otu))
+
+# Load metadata
+meta <- read_tsv(
+  "down_20260609/sample-metadata.tsv",
+  comment = "",  
+  show_col_types = FALSE
+)
+meta <- column_to_rownames(meta, var = "#SampleID")
+
+tax1 <- read.table("down_20260609/exported-taxonomy_its/taxonomy.tsv", 
+                  header = TRUE, 
+                  sep = "\t", 
+                  row.names = 1)
+tax_split <- tax1 %>%
+  separate(Taxon, 
+           into = c("Kingdom","Phylum","Class","Order","Family","Genus","Species"), 
+           sep = ";", 
+           fill = "right")
+
+# Create objects
+OTU <- otu_table(otu, taxa_are_rows=TRUE)
+SAM <- sample_data(meta)
+TAX <- tax_table(as.matrix(tax_split))
+ps <- phyloseq(OTU, SAM, TAX)
+
+tax_table(ps) <- apply(tax_table(ps), 2, trimws)
+tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
+
+ps_genus <- tax_glom(ps, taxrank = "Genus")
+
+ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+
+df <- psmelt(ps_rel)
+
+taxa_abund <- tapply(df$Abundance, df$Genus, sum)
+
+top10 <- names(sort(taxa_abund, decreasing = TRUE))[1:10]
+
+keep_taxa <- unique(c(top10))
+
+df$Genus <- as.character(df$Genus)
+
+df$Genus[!df$Genus %in% keep_taxa] <- "Other"
+
+all_taxa <- unique(df$Genus)
+
+auto_taxa <- setdiff(all_taxa, "Other")
+
+auto_cols <- setNames(c(
+  "darkblue",  "#008000", "sienna3", "orange",
+  "deeppink4",  "skyblue3", "red3"
+  , "maroon3", "wheat3", "yellow"
+), auto_taxa)
+
+other_col <- c("Other" = "grey80")
+
+final_cols <- c(auto_cols, other_col)
+
+df$Genus <- factor(df$Genus, levels = names(final_cols))
+
+#remove sequencing blank from the plot
+df_sub <- subset(df, treatment != "blank")
+
+# create hierarchical grouping key
+df_sub$treatment <- as.character(df_sub$treatment)
+df_sub$Group <- paste(df_sub$treatment, df_sub$Sample, sep = " ")
+df_sub$Label <- paste(df_sub$treatment, df_sub$Sample)
+
+df_sub$Group <- factor(df_sub$Group, levels = unique(df_sub$Group))
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+df_sub <- df_sub[order(df_sub$treatment, df_sub$Sample), ]
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = final_cols) +
+  scale_x_discrete(drop = FALSE) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
+```
+Alpha diversity:
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson", "Chao1", "Observed"))
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta[meta$treatment != "blank", , drop = FALSE]  
+ps_f <- prune_samples(rownames(meta_f), ps)
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  scale_fill_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.7432 - normal
+#Insecticide - p-value = 0.7337 - normal
+#Microsap - p-value = 0.09381 - normal
+
+pairwise.t.test(alpha_df$Shannon,
+                alpha_df$treatment,
+                p.adjust.method = "BH",
+                pool.sd = FALSE)
+#            Control Insecticide
+#Insecticide 0.88    -          
+#Microsap    0.88    0.92
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.96    -          
+#Microsap    0.96    0.96 
+```
+beta diversity:
+
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq  Mean Sq     F N.Perm Pr(>F)
+#Groups     2 0.04012 0.020058 1.019    999  0.357
+#Residuals 21 0.41336 0.019684
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.8518 0.10682 1.2558  0.131
+#Residual 21   7.1218 0.89318              
+#Total    23   7.9736 1.00000    
+#No significant difference in community composition between treatments, treatment explains only ~10.7% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.017639 0.0088195 1.3242    999  0.277
+#Residuals 21 0.139863 0.0066601
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.5967 0.10077 1.1766  0.163
+#Residual 21   5.3251 0.89923              
+#Total    23   5.9218 1.00000  
+#No significant difference in community composition between treatments, treatment explains ~10.1% of variation     
+```
+No differences
+
+Presence/abscence - bubble plot:
+```R
+#build matrix for Genus level
+ps_f_genus <- tax_glom(ps_f, taxrank = "Genus")
+ps_f_genus <- filter_taxa(ps_f_genus, function(x) sum(x) > 0, TRUE)
+
+mat <- as(otu_table(ps_f_genus), "matrix")
+if (taxa_are_rows(ps_f_genus)) {
+  mat <- t(mat)
+}
+
+pa_mat <- (mat > 0) * 1
+
+meta_mat <- meta_f[match(rownames(pa_mat), rownames(meta_f)), , drop = FALSE]
+
+group <- meta_mat$treatment
+groups <- unique(group)
+stopifnot(all(rownames(pa_mat) == rownames(meta_mat)))
+
+#Pairwise Fisher tests (ALL pairs)
+pair_list <- combn(groups, 2, simplify = FALSE)
+
+pairwise_p <- lapply(pair_list, function(grp) {
+  g1 <- grp[1]
+  g2 <- grp[2]
+  idx <- group %in% c(g1, g2)
+  apply(pa_mat[idx, , drop = FALSE], 2, function(x) {
+    tab <- table(x, group[idx])
+    if (nrow(tab) < 2 || ncol(tab) < 2) return(NA)
+    if (all(tab == 0)) return(NA)
+    fisher.test(tab)$p.value
+  })
+})
+
+names(pairwise_p) <- sapply(pair_list, paste, collapse = "_vs_")
+
+pairwise_p_adj <- lapply(pairwise_p, function(p) {
+  p.adjust(p, method = "BH")
+})
+
+#Extract significant taxa (ANY comparison)
+sig_taxa <- unique(unlist(lapply(pairwise_p_adj, function(p) {
+  names(p)[which(p < 0.05 & !is.na(p))]
+})))
+
+prev_list <- lapply(groups, function(g) {
+  colMeans(pa_mat[group == g, sig_taxa, drop = FALSE])
+})
+names(prev_list) <- groups
+
+tax <- as.data.frame(tax_table(ps_f_genus))
+tax_labels <- tax$Genus
+names(tax_labels) <- rownames(tax)
+
+df <- data.frame(
+  Taxon = sig_taxa,
+  Label = tax_labels[sig_taxa]
+)
+
+for (g in groups) {
+  df[[paste0(g, "_prev")]] <- prev_list[[g]]
+}
+
+#Long format for plotting
+df_long <- pivot_longer(
+  df,
+  cols = ends_with("_prev"),
+  names_to = "Group",
+  values_to = "Prevalence"
+)
+
+df_long$Group <- gsub("_prev", "", df_long$Group)
+
+df_long$Label[is.na(df_long$Label)] <- df_long$Taxon
+
+ggplot(df_long, aes(
+  x = Group,
+  y = Label,
+  size = Prevalence,
+  color = Group
+)) +
+  geom_point(alpha = 0.85) +
+  scale_size(range = c(2, 10)) +
+  theme_classic(base_size = 14) +
+  labs(
+    x = NULL,
+    y = "Genus",
+    size = "Prevalence",
+    color = "Group",
+    title = "Significant taxa (pairwise Fisher tests, FDR < 0.05)"
+  )
+```
+No significant taxa - hard with only 8 reps
+
+Presence/abscence + adundance - heatmap:
+```R
+tax_tab <- as.data.frame(tax_table(ps_f_genus))
+
+tax_names <- tax_tab$Genus
+tax_names[is.na(tax_names) | tax_names == ""] <- "Unknown"
+tax_names <- make.unique(tax_names)
+
+mat_asv <- mat
+colnames(mat_asv) <- tax_names
+
+mat_genus_rel <- sweep(mat_asv, 1, rowSums(mat_asv), "/")
+mat_genus_rel_log <- log10(mat_genus_rel + 1e-6)
+
+#Order samples
+meta_mat <- meta[rownames(mat_genus_rel_log), , drop = FALSE ]
+
+ord <- order(meta_mat$treatment)
+
+mat_ordered <- mat_genus_rel_log[ord, ]
+meta_ordered <- meta_mat[ord, , drop = FALSE  ]
+
+# --- Define colors: 0 = white, then blue → red ---
+# Avoid including 0 in gradient
+nonzero_vals <- mat_ordered[mat_ordered > 0]
+
+# --- Row annotations ---
+annotation_row <- data.frame(
+  Treatment = meta_ordered$treatment
+)
+
+rownames(annotation_row) <- rownames(mat_ordered)
+
+#Optional: gaps
+gaps <- cumsum(table(meta_ordered$treatment))
+
+pheatmap(
+  mat_ordered,
+  color = colorRampPalette(c("white", "blue", "red"))(100),
+  breaks = seq(
+    min(mat_ordered, na.rm = TRUE),
+    max(mat_ordered, na.rm = TRUE),
+    length.out = 101
+  ),
+  cluster_rows = FALSE,
+  cluster_cols = TRUE,
+  annotation_row = annotation_row,
+  gaps_row = gaps,
+  border_color = "grey90",
+  fontsize_col = 7
+)
 ```
