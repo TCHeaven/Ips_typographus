@@ -1,8 +1,24 @@
 # Innovative Pest Sustainable control to reduce the impact of bark beetle and weevil attacks on alpine forests
 
+The IPS project aims to develop an innovative sustainable control method to reduce the impact of xylophagous insect attacks on Alpine forests. The microbiome composition of Ips under different treatment conditions will be tested to identify and shifts caused by the different treatments.
+
 All commands executed from /data/users/theaven/Ips_jam_project unless othewise specified.
 
-Look for amplicons with the ITS primers in the Ips genome, https://primerdigital.com/tools/epcr.html returned no amplicons for the ITS primers.
+## Contents
+
+## Microbiome barcode sequencing
+
+We will prepare samples for sequencing of microbial barcodes (16S + ITS) usign the ONT Microbial Amplicon Barcoding Sequencing for 16S and ITS (SQK-MAB114.24) kit https://nanoporetech.com/document/microbial-amplicon-barcoding-sequencing-for-16s-and-its-sqk-mab114-24 
+
+### Troubleshooting PCR
+
+Primer mixes included in the ONT kit should amplify the full 16S and ITS regions. we expect PCR products of ~1,500bp and ~600bp, respectively. The anticipated result was obtained with 16S primers; however, PCR with the ITS primers is consistently producing a >2kbp product and in some samples multiples products, as shown by gel electrophoresis:
+
+![ITS PCR](figures/Screenshot 2026-02-09 112539.png)
+
+Check for amplicons with the ITS primers in the Ips genome, https://primerdigital.com/tools/epcr.html returned no amplicons for the ITS primers.
+
+In silico PCR:
 ```bash
 echo ITS1-ITS4 TCCGTAGGTGAACCTGCGG TCCTCCGCTTATTGATATGC >> primers.txt
 echo ITS1_Fus-ITS4 TCCGTTGGTGAACCAGCGG TCCTCCGCTTATTGATATGC >> primers.txt
@@ -19,10 +35,24 @@ primersearch \
   -mismatchpercent 10 \
   -outfile primer_results.txt
 
+#Extract amplicon regions
 module load samtools/1.19.2-gcc-13.3.0-a2yhwkt
 awk -v GENOME="/home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna" -f /home/clusterusers/theaven/git_repos/Scripts/unibz/primersearch_to_faidx.awk /home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna.fai primer_results.txt > extract_cmds.sh
 bash extract_cmds.sh > amplicons.fasta
+```
+With 10% mismatch permitted the ITS primers produce amplicons vs the Ips genome, problems with ITS primers and Ips have been previously reported (Strid et al. 2015).
 
+PCR products were sanger sequenced for a subset of samples. This confirmed that the larger PCR products result from the Ips genome. Multi-product samples likely contain contamination from nematode and/or hymenoptera parasites.
+
+![ITS PCR](figures/Screenshot 2026-09-01 140645.png)
+
+### Nanopore adaptive sampling
+
+We will perform sequencing of the microbial barcoding regions using both illumina and long-read nanopore sequencing. One advantage of using an ONT sequencer is the capability to perform "adaptive sampling" https://nanoporetech.com/document/adaptive-sampling#targeting-and-buffering. In this method nucleotide strands are filtered for inclusion or rejection in real time during sequencing, rejected strands are ejected from pores and not seqeunced further (after ~400bp).
+
+To utilise adaptive sampling in in either enrichment or depletion mode reference database files are required. These reference files should include both reference seqeunces for rejection and references sequences for inclusion. In our pipeline we are aiming to use depletion mode to reject host Ips reads, as we know that the PCR products and subsequent sequencing libraries contain Ips derived sequence. Fungal sequence from the UNITE database will be included as a reference for inclusion.
+
+```bash
 #Fungal ITS sequences were downloaded from UNITE (DOI: https://doi.org/10.15156/BIO/3301229) [Accessed 1800202026; https://unite.ut.ee/repository.php], to this .fasta I will add the Ips sequences which have been predicted to be amplified by our ITS1/4 primmers
 echo JADDUH010000185.1 >> temp_id.txt
 echo JADDUH010000200.1 >> temp_id.txt
@@ -36,14 +66,9 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
         --input /home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna \
         --output temp.fa
 
-import argparse
-from Bio import SeqIO
-from Bio.SeqRecord import SeqRecord
-
-
 cat temp.fa >> sh_general_release_dynamic_19.02.2025.fasta
 
-#Create bedfile to define regions for depletion mode, these cover all of the hits in the Ips sequences + 250bp buffer (probably unnecessary for our use case)
+#Create bedfile to define regions for depletion mode, these cover all of the hits in the Ips sequences + 250bp buffer (probably unnecessary for our use case). Regions not given in the depletion bedfile will be reference for inclusion.
 echo JADDUH010000185.1 32622 35166 >> ITS_exclude.bed
 echo JADDUH010000200.1 12958 15502 >> ITS_exclude.bed
 echo JADDUH010000208.1 29499 32043 >> ITS_exclude.bed
@@ -55,13 +80,17 @@ cat sh_general_release_dynamic_19.02.2025.fasta | cut -f1 -d '|' >> ITS_all.fast
 awk '/^>/ {printf "%s%d\n", $0, ++i; next} {print}' ITS_all.fasta >> unite_ITS_all+.fasta 
 
 grep '>' unite_ITS_all+.fasta | tail
+#>JADDUH010000185.1102138
+#>JADDUH010000200.1102139
+#>JADDUH010000208.1102140
+#>JADDUH010000234.1102141
+#>JADDUH010000076.1102142
+```
+ONT recommend that the reference fasta used is <125Mb in size, we are below this limit; however, the sequencing run keeps crashing, I beleive this is due to the large number of small sequences in the reference. The adaptive sampling methods was originally designed with genome assembly in mind and a relatively contiguous genome as reference, not the entire UNITE database.
 
->JADDUH010000185.1102138
->JADDUH010000200.1102139
->JADDUH010000208.1102140
->JADDUH010000234.1102141
->JADDUH010000076.1102142
 
+Similar seqeunces in the UNITE database were clustered to create a representative set, with lower total sequence count.
+```bash
 srun -p bioagri  -c 8 --mem 32G --pty bash
 module load anaconda3
 conda activate vsearch
@@ -150,38 +179,20 @@ vsearch --cluster_fast unite_its_19.02.2025_derep.fasta \
   cat temp.fa >> "$out"
 done
 
-unite_its_19.02.2025_derep_50.fasta
-181
-
-unite_its_19.02.2025_derep_55.fasta
-647
-
-unite_its_19.02.2025_derep_60.fasta
-1662
-
-unite_its_19.02.2025_derep_65.fasta
-3576
-
-unite_its_19.02.2025_derep_70.fasta
-6241
-
-unite_its_19.02.2025_derep_75.fasta
-10023
-
-unite_its_19.02.2025_derep_80.fasta
-15439
-
-unite_its_19.02.2025_derep_85.fasta
-23587
-
-unite_its_19.02.2025_derep_90.fasta
-36270
-
-unite_its_19.02.2025_derep_95.fasta
-60303
-
-
+#unite_its_19.02.2025_derep_50.fasta = 181 seqeunces
+#unite_its_19.02.2025_derep_55.fasta = 647 seqeunces
+#unite_its_19.02.2025_derep_60.fasta = 1662 seqeunces
+#unite_its_19.02.2025_derep_65.fasta = 3576 seqeunces
+#unite_its_19.02.2025_derep_70.fasta = 6241 seqeunces
+#unite_its_19.02.2025_derep_75.fasta = 10023 seqeunces
+#unite_its_19.02.2025_derep_80.fasta = 15439 seqeunces
+#unite_its_19.02.2025_derep_85.fasta = 23587 seqeunces
+#unite_its_19.02.2025_derep_90.fasta = 36270 seqeunces
+#unite_its_19.02.2025_derep_95.fasta = 60303 seqeunces
 ```
+Clustering to 90% identity resulted in a reference of 36,270 sequences - Minknow ran successfully with this file.
+
+
 ```bash
 #Compress and upload 16S files, check before and after upload
 tar -cvzf "\\wsl.localhost\Ubuntu\home\tcheaven\16S.tar.gz" -C "\\share.unibz.it\AppliedMolecularEntomologyLab\ips_typographus\nanopore_16S_ITS" 16S
