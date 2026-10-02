@@ -5,16 +5,61 @@ The IPS project aims to develop an innovative sustainable control method to redu
 All commands executed from /data/users/theaven/Ips_jam_project unless othewise specified.
 
 ## Contents
+1. [Microbiome barcode sequencing](#1)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1.1 [Troubleshooting PCR](#2)<br>
+2. [Nanopore - long reads - 1st round](#15)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.2 [Nanopore adaptive sampling](#3)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.3 [Basecalling](#4)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.4 [QC](#7)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.4.1 [Primer trimming](#5)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.4.2 [Filterlong](#6)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;2.5 [Classification](#8)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.1 [EPI2ME - wf-16s - unfiltered](#9)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.1.1 [EPI2ME - wf-16s - all](#10)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.1.2 [EPI2ME - wf-16s - depletion](#11)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.2 [EPI2ME - wf-16s - filtered](#12)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.2.1 [EPI2ME - wf-16s - all](#13)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.3 [EMU - unfiltered](#14)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4 [EMU - filtered](#16)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.1 [EMU](#17)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.1.1 [Plot](#19)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.2 [ITSx](#31)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.3 [Diversity analysis and plotting - 16S](#18)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.4 [Diversity analysis and plotting - ITS](#20)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4 [NanoVI - unfiltered](#21)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.5 [NanoVI - filtered](#22)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.6 [UNIFRAC](#23)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.6.1 [Vsearch - unoise](#24)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.6.2 [Vsearch - w/o unoise](#25)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7 [Kraken](#26)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7 [BLASTN](#27)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.1 [BLAST](#28)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.2 [Taxonkit - LCA](#30)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.3 [MEGAN - LCA](#29)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.4 [Custom script - LCA](#30)<br>
+3. [Illumina - short reads - 1st round](#32)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.1 [Collecting data](#33)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.2 [Quality Control and ASV Inference](#34)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.2.1 [FastQC](#35)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.2.2 [CutAdapt](#36)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.2.3 [DADA2](#37)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.2.3 [QIIME - plot](#38)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.3 [Taxonomy Assignment](#39)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.3.1 [IDTAXA](#40)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.3.2 [Curate](#41)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;3.4 [Diversity analysis and plotting](#42)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.4.1 [16S](#43)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.4.2 [ITS](#44)<br>
 
-## Microbiome barcode sequencing
+## Microbiome barcode sequencing <a name="1"></a>
 
 We will prepare samples for sequencing of microbial barcodes (16S + ITS) usign the ONT Microbial Amplicon Barcoding Sequencing for 16S and ITS (SQK-MAB114.24) kit https://nanoporetech.com/document/microbial-amplicon-barcoding-sequencing-for-16s-and-its-sqk-mab114-24 
 
-### Troubleshooting PCR
+### Troubleshooting PCR <a name="2"></a>
 
 Primer mixes included in the ONT kit should amplify the full 16S and ITS regions. we expect PCR products of ~1,500bp and ~600bp, respectively. The anticipated result was obtained with 16S primers; however, PCR with the ITS primers is consistently producing a >2kbp product and in some samples multiples products, as shown by gel electrophoresis:
 
-![ITS PCR](figures/Screenshot 2026-02-09 112539.png)
+![ITS PCR](figures/Screenshot_2026-02-09_112539.png)
 
 Check for amplicons with the ITS primers in the Ips genome, https://primerdigital.com/tools/epcr.html returned no amplicons for the ITS primers.
 
@@ -44,9 +89,11 @@ With 10% mismatch permitted the ITS primers produce amplicons vs the Ips genome,
 
 PCR products were sanger sequenced for a subset of samples. This confirmed that the larger PCR products result from the Ips genome. Multi-product samples likely contain contamination from nematode and/or hymenoptera parasites.
 
-![ITS PCR](figures/Screenshot 2026-09-01 140645.png)
+![ITS PCR](figures/Screenshot_2026-09-01_140645.png)
 
-### Nanopore adaptive sampling
+## Nanopore - long reads - 1st round <a name="15"></a>
+
+### Nanopore adaptive sampling <a name="3"></a>
 
 We will perform sequencing of the microbial barcoding regions using both illumina and long-read nanopore sequencing. One advantage of using an ONT sequencer is the capability to perform "adaptive sampling" https://nanoporetech.com/document/adaptive-sampling#targeting-and-buffering. In this method nucleotide strands are filtered for inclusion or rejection in real time during sequencing, rejected strands are ejected from pores and not seqeunced further (after ~400bp).
 
@@ -236,7 +283,7 @@ Out-File "C:\Users\THeaven\windows_ITS_checksums12.txt"
 find /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/*/*/*/pod5/*.pod5 -type f -exec md5sum {} \; >> /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/linux_ITS_checksums.txt
 #checksums of the .pod5 files are the same before and after upload
 ```
-#### Basecalling
+### Basecalling <a name="4"></a>
 
 Sequencing was run with fast basecalling, raw .POD5 files were output which we will now use for basecalling with the highest accuracy settings with dorado. Dorado is designed by Oxford Nanopore and replaces guppy, it performs basecalling, demultiplexing, and also adapter trimming by default - there is therefore no need to use secondary adapter trimmers, eg. porechop.
 
@@ -319,12 +366,21 @@ for dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basec
 done
 
 ```
-#### Primer trimming
+
+### QC <a name="7"></a>
+#### Primer trimming <a name="5"></a>
+
+As we are sequencing PCR amplified barcode regions rather that the whole genome, primers should be trimmed from sequences.
+
+***16S***
+
+16S reads before trimming:
 
 ```bash
 module load anaconda3
 conda activate seqkit-2.10
 seqkit stats /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/*.fastq
+```
 ```
 /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/barcode01.fastq     FASTQ   DNA    111,241  149,580,502        8  1,344.7   12,844
 /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/barcode02.fastq     FASTQ   DNA    140,325  179,014,046       11  1,275.7   10,432
@@ -351,6 +407,8 @@ seqkit stats /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/*
 /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/barcode23.fastq     FASTQ   DNA    183,902  252,614,214        7  1,373.6   13,551
 /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/barcode24.fastq     FASTQ   DNA     67,645   97,286,004       16  1,438.2   19,715
 /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/unclassified.fastq  FASTQ   DNA    213,830  319,071,976        5  1,492.2   27,940
+```
+Trimming:
 
 ```bash
 for Reads in /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/*.fastq; do
@@ -378,6 +436,8 @@ done
 
 seqkit stats /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/*.fastq
 ```
+16S reads after trimming:
+```
 file                                                                                               format  type  num_seqs      sum_len  min_len  avg_len  max_len
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/barcode01.trim.fastq     FASTQ   DNA     16,978   24,076,817      800  1,418.1    1,971
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/barcode02.trim.fastq     FASTQ   DNA     27,600   38,676,559      800  1,401.3    1,988
@@ -404,9 +464,14 @@ file                                                                            
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/barcode23.trim.fastq     FASTQ   DNA     68,561   95,610,238      800  1,394.5    1,982
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/barcode24.trim.fastq     FASTQ   DNA     24,936   35,577,616      800  1,426.8    1,979
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/unclassified.trim.fastq  FASTQ   DNA     74,297  106,173,199      800    1,429    2,000
+```
+***ITS***
+
+ITS reads before trimming:
 
 ```bash
 seqkit stats /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/*.fastq
+```
 ```
 file                                                                                  format  type  num_seqs      sum_len  min_len  avg_len  max_len
 /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/barcode01.fastq     FASTQ   DNA     80,575   73,348,711       20    910.3   11,814
@@ -434,6 +499,8 @@ file                                                                            
 /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/barcode23.fastq     FASTQ   DNA    207,039  151,490,589       23    731.7   10,753
 /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/barcode24.fastq     FASTQ   DNA    179,113  171,499,626       21    957.5   10,711
 /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/unclassified.fastq  FASTQ   DNA     88,567   96,722,643       65  1,092.1  123,248
+```
+Trimming:
 
 ```bash
 for Reads in /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/*.fastq; do
@@ -461,6 +528,9 @@ done
 
 seqkit stats /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/*.fastq
 ```
+ITS reads after trimming:
+
+```
 file                                                                                               format  type  num_seqs     sum_len  min_len  avg_len  max_len
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/barcode01.trim.fastq     FASTQ   DNA     20,965  12,666,280      300    604.2    1,495
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/barcode02.trim.fastq     FASTQ   DNA      5,253   3,033,425      300    577.5    1,426
@@ -487,8 +557,12 @@ file                                                                            
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/barcode23.trim.fastq     FASTQ   DNA     63,012  40,311,448      300    639.7    1,478
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/barcode24.trim.fastq     FASTQ   DNA     44,562  26,405,739      300    592.6    1,497
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/unclassified.trim.fastq  FASTQ   DNA     23,231  15,720,375      300    676.7    1,500
+```
+#### Filtlong <a name="6"></a>
 
-#### Filtlong
+Filter trimmed reads for quality
+
+***16s***
 
 ```bash
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/*.fastq; do
@@ -507,6 +581,7 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/Cu
 done
 
 seqkit stats /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz
+```
 ```
 file                                                                                                                    format  type  num_seqs      sum_len  min_len  avg_len  max_len
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/barcode01.trim.filtlong.fastq.gz     FASTQ   DNA     16,978   24,076,817      800  1,418.1    1,971
@@ -534,6 +609,9 @@ file                                                                            
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/barcode23.trim.filtlong.fastq.gz     FASTQ   DNA     68,561   95,610,238      800  1,394.5    1,982
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/barcode24.trim.filtlong.fastq.gz     FASTQ   DNA     24,936   35,577,616      800  1,426.8    1,979
 /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/unclassified.trim.filtlong.fastq.gz  FASTQ   DNA     74,297  106,173,199      800    1,429    2,000
+```
+
+***ITS***
 
 ```bash
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/*.fastq; do
@@ -552,6 +630,7 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/Cu
 done
 
 seqkit stats /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz
+```
 ```
 file                                                                                                                    format  type  num_seqs     sum_len  min_len  avg_len  max_len
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/barcode01.trim.filtlong.fastq.gz     FASTQ   DNA     20,965  12,666,280      300    604.2    1,495
@@ -579,16 +658,21 @@ file                                                                            
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/barcode23.trim.filtlong.fastq.gz     FASTQ   DNA     63,012  40,311,448      300    639.7    1,478
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/barcode24.trim.filtlong.fastq.gz     FASTQ   DNA     44,562  26,405,739      300    592.6    1,497
 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/unclassified.trim.filtlong.fastq.gz  FASTQ   DNA     23,060  15,657,253      300      679    1,500
-
+```
 
 The only reads dropped by the --min_mean_q 70 quality threshold of Filtlong are from the unclassified file.
 
-#### EPI2ME - wf-16s
+### Classification  <a name="8"></a>
+#### EPI2ME - wf-16s - unfiltered  <a name="9"></a>
+
+EPI2ME - wf-16s is the is an Oxford Nanopore Technologies provided bioinformatics workflow for identifying and profiling microorganisms from 16S/ITS rRNA amplicon sequencing data.
 
 https://epi2me.nanoporetech.com/epi2me-docs/workflows/wf-16s/#analysing-its-amplicons
 
+ERROR: Classification was initially performed on reads without primer trimming or quality filtering.
+
+Test the pipeline:
 ```bash
-#Test the pipeline
 screen -S wf-16s
 srun  -p bioagri  -c 12 --mem=32G --account=shame --pty bash
 module load apptainer/1.4.1-gcc-13.3.0-3
@@ -604,7 +688,17 @@ nextflow run epi2me-labs/wf-16s \
     --fastq 'wf-16s-demo/test_data' \
     --minimap2_by_reference \
     -profile singularity
+```
 
+#### EPI2ME - wf-16s - all  <a name="10"></a>
+
+***16S***
+
+EPI2ME - wf-16s was trialled with the two available classification approaches, minimap2 and kraken2, for 16S.
+
+Different min/max length settings are recommended for 16S and ITS regions and different ncbi datasets are used as reference.
+
+```bash
 #Make expected file structure for multiplexed reads
 for dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/*/basecalls/demuxed/*/*/*/fastq_pass/*); do
   barcode=$(basename $dir)
@@ -668,32 +762,6 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S); do
   fi
 done
 
-#ITS with all reads, minimap
-for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS); do
-  Task=wf-16s
-  InDir="$Dir"
-  Sample_Sheet=/data/users/theaven/Ips_jam_project/20260323_sample_sheet.csv
-  Amplicon=ITS
-  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/ITS/inclusive
-  Classifier=minimap2
-  Database=ncbi_16s_18s_28s_ITS
-  Exclude=N
-  Max_len=100000
-  Min_len=10
-  Abundance=0.0
-  Unclassified=true
-  ExpectedOutput="$OutDir"/out.fastq
-
-  if [ ! -s "$ExpectedOutput" ]; then
-    mkdir -p $OutDir
-    ID=$(echo "$OutDir" | rev | cut -d '/' -f1 | rev)
-
-    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_EPI2ME_wf-16s.sh "$InDir" "$Sample_Sheet" "$Amplicon" "$OutDir" "$Classifier" --database "$Database" --exclude "$Exclude" --max_len "$Max_len" --min_len "$Min_len" --abundance "$Abundance" --unclassified "$Unclassified")
-    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
-  else
-    echo "For $ID found: $ExpectedOutput" 
-  fi
-done
 
 #16S with expected size reads, removing host, minimap
 for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S); do
@@ -722,18 +790,18 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S); do
   fi
 done
 
-#ITS with expected size reads, removing host, minimap
-for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS); do
+#16S with expected size reads, removing host, kraken
+for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S); do
   Task=wf-16s
   InDir="$Dir"
   Sample_Sheet=/data/users/theaven/Ips_jam_project/20260323_sample_sheet.csv
-  Amplicon=ITS
-  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/ITS/exclusive
-  Classifier=minimap2
-  Database=ncbi_16s_18s_28s_ITS
+  Amplicon=16S
+  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/16S/exclusive-kraken
+  Classifier=kraken2
+  Database=ncbi_16s_18s
   Exclude=/home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna
-  Max_len=1000
-  Min_len=300
+  Max_len=2000
+  Min_len=1000
   Abundance=0.01
   Unclassified=false
   ExpectedOutput="$OutDir"/out.fastq
@@ -748,19 +816,54 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS); do
     echo "For $ID found: $ExpectedOutput" 
   fi
 done
+```
 
-#16S with expected size reads, removing host, kraken
-for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S); do
+***ITS***
+
+EPI2ME - wf-16s was trialled with the two available classification approaches, minimap2 and kraken2, for ITS. The barcode schema is the same as for 16S.
+
+Different min/max length settings are recommended for 16S and ITS regions and different ncbi datasets are used as reference.
+
+```bash
+#ITS with all reads, minimap
+for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS); do
   Task=wf-16s
   InDir="$Dir"
   Sample_Sheet=/data/users/theaven/Ips_jam_project/20260323_sample_sheet.csv
-  Amplicon=16S
-  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/16S/exclusive-kraken
-  Classifier=kraken2
-  Database=ncbi_16s_18s
+  Amplicon=ITS
+  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/ITS/inclusive
+  Classifier=minimap2
+  Database=ncbi_16s_18s_28s_ITS
+  Exclude=N
+  Max_len=100000
+  Min_len=10
+  Abundance=0.0
+  Unclassified=true
+  ExpectedOutput="$OutDir"/out.fastq
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    mkdir -p $OutDir
+    ID=$(echo "$OutDir" | rev | cut -d '/' -f1 | rev)
+
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_EPI2ME_wf-16s.sh "$InDir" "$Sample_Sheet" "$Amplicon" "$OutDir" "$Classifier" --database "$Database" --exclude "$Exclude" --max_len "$Max_len" --min_len "$Min_len" --abundance "$Abundance" --unclassified "$Unclassified")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+
+#ITS with expected size reads, removing host, minimap
+for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS); do
+  Task=wf-16s
+  InDir="$Dir"
+  Sample_Sheet=/data/users/theaven/Ips_jam_project/20260323_sample_sheet.csv
+  Amplicon=ITS
+  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/ITS/exclusive
+  Classifier=minimap2
+  Database=ncbi_16s_18s_28s_ITS
   Exclude=/home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna
-  Max_len=2000
-  Min_len=1000
+  Max_len=1000
+  Min_len=300
   Abundance=0.01
   Unclassified=false
   ExpectedOutput="$OutDir"/out.fastq
@@ -804,16 +907,13 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS); do
 done
 ```
 
-Seperate with and without depletion
+#### EPI2ME - wf-16s - ITS depletion  <a name="11"></a>
+
+For ITS sequencing adaptive sampling in depeltion mode was trialled during sequencing. Classification was performed for the data generated with and without depletion.
+
+***With depletion***
 ```bash
 #Make expected file structure for multiplexed reads
-for dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/*/basecalls/demuxed/*-9/*/*/fastq_pass/*); do
-  barcode=$(basename $dir)
-  Out=$(echo "$dir" | cut -d '/' -f1,2,3,4,5,6,7,8 | sed 's@raw_data/minion/ITS@wf-16s/in/ITS-nodep@g')/"$barcode"
-  mkdir -p "$Out"
-  ln -s "$dir"/* "$Out"/.
-done
-
 for dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/*/basecalls/demuxed/*-10/*/*/fastq_pass/*); do
   barcode=$(basename $dir)
   Out=$(echo "$dir" | cut -d '/' -f1,2,3,4,5,6,7,8 | sed 's@raw_data/minion/ITS@wf-16s/in/ITS-dep@g')/"$barcode"
@@ -845,6 +945,17 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS-dep); do
   else
     echo "For $ID found: $ExpectedOutput" 
   fi
+done
+```
+
+***Without depletion***
+```bash
+#Make expected file structure for multiplexed reads
+for dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/*/basecalls/demuxed/*-9/*/*/fastq_pass/*); do
+  barcode=$(basename $dir)
+  Out=$(echo "$dir" | cut -d '/' -f1,2,3,4,5,6,7,8 | sed 's@raw_data/minion/ITS@wf-16s/in/ITS-nodep@g')/"$barcode"
+  mkdir -p "$Out"
+  ln -s "$dir"/* "$Out"/.
 done
 
 for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS-nodep); do
@@ -879,19 +990,27 @@ for file in $(ls /data/users/theaven/Ips_jam_project/wf-16s/out/*/*/*-report.htm
 cp $file /data/users/theaven/download_20260330/$(echo $file | sed 's@/data/users/theaven/download_20260330@@g' | sed 's@/@-@g' )
 done
 ```
+
+#### EPI2ME - wf-16s - filtered  <a name="12"></a>
+
+EPI2ME - wf-16s is the is an Oxford Nanopore Technologies provided bioinformatics workflow for identifying and profiling microorganisms from 16S/ITS rRNA amplicon sequencing data.
+
+https://epi2me.nanoporetech.com/epi2me-docs/workflows/wf-16s/#analysing-its-amplicons
+
+#### EPI2ME - wf-16s - all  <a name="13"></a>
+
+***16S***
+
+EPI2ME - wf-16s was trialled with the two available classification approaches, minimap2 and kraken2, for 16S, following trimming of primers and quality filtering. The barcode schema is the same as for unfiltered reads.
+
+Different min/max length settings are recommended for 16S and ITS regions and different ncbi datasets are used as reference.
+
 ***Repeat EPI2ME with filtered reads***
 ```bash
 #Make expected file structure for multiplexed reads
 for dir in $(ls /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/*.trim.fastq); do
   barcode=$(basename $dir | sed 's@.trim.fastq@@g')
   Out=$(echo "$dir" | cut -d '/' -f1,2,3,4,5,6,7,8 | sed 's@qc_data/minion/16S@wf-16s/in/16S-trim@g')/"$barcode"
-  mkdir -p "$Out"
-  ln -s "$dir" "$Out"
-done
-
-for dir in $(ls /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/*.trim.fastq); do
-  barcode=$(basename $dir | sed 's@.trim.fastq@@g')
-  Out=$(echo "$dir" | cut -d '/' -f1,2,3,4,5,6,7,8 | sed 's@qc_data/minion/ITS@wf-16s/in/ITS-trim@g')/"$barcode"
   mkdir -p "$Out"
   ln -s "$dir" "$Out"
 done
@@ -923,18 +1042,18 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S-trim); do
   fi
 done
 
-#ITS with expected size reads, removing host, minimap
-for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS-trim); do
+#16S with expected size reads, removing host, kraken
+for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S-trim); do
   Task=wf-16s
   InDir="$Dir"
   Sample_Sheet=/data/users/theaven/Ips_jam_project/20260323_sample_sheet.csv
-  Amplicon=ITS
-  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/ITS-trim/exclusive
-  Classifier=minimap2
-  Database=ncbi_16s_18s_28s_ITS
+  Amplicon=16S
+  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/16S-trim/exclusive-kraken
+  Classifier=kraken2
+  Database=ncbi_16s_18s
   Exclude=/home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna
-  Max_len=1000
-  Min_len=300
+  Max_len=2000
+  Min_len=1000
   Abundance=0.01
   Unclassified=false
   ExpectedOutput="$OutDir"/out.fastq
@@ -949,19 +1068,33 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS-trim); do
     echo "For $ID found: $ExpectedOutput" 
   fi
 done
+```
+***ITS***
 
-#16S with expected size reads, removing host, kraken
-for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/16S-trim); do
+EPI2ME - wf-16s was trialled with the two available classification approaches, minimap2 and kraken2, for ITS, following primer trimming and quality filtering. The barcode schema is the same as for 16S.
+
+Different min/max length settings are recommended for 16S and ITS regions and different ncbi datasets are used as reference.
+
+```bash
+for dir in $(ls /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/*.trim.fastq); do
+  barcode=$(basename $dir | sed 's@.trim.fastq@@g')
+  Out=$(echo "$dir" | cut -d '/' -f1,2,3,4,5,6,7,8 | sed 's@qc_data/minion/ITS@wf-16s/in/ITS-trim@g')/"$barcode"
+  mkdir -p "$Out"
+  ln -s "$dir" "$Out"
+done
+
+#ITS with expected size reads, removing host, minimap
+for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS-trim); do
   Task=wf-16s
   InDir="$Dir"
   Sample_Sheet=/data/users/theaven/Ips_jam_project/20260323_sample_sheet.csv
-  Amplicon=16S
-  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/16S-trim/exclusive-kraken
-  Classifier=kraken2
-  Database=ncbi_16s_18s
+  Amplicon=ITS
+  OutDir=/data/users/theaven/Ips_jam_project/wf-16s/out/ITS-trim/exclusive
+  Classifier=minimap2
+  Database=ncbi_16s_18s_28s_ITS
   Exclude=/home/clusterusers/theaven/genomes/Ips/typographus/GCA_016097725.1/GCA_016097725.1_CZU_Ityp_1.0_genomic.fna
-  Max_len=2000
-  Min_len=1000
+  Max_len=1000
+  Min_len=300
   Abundance=0.01
   Unclassified=false
   ExpectedOutput="$OutDir"/out.fastq
@@ -1004,6 +1137,11 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/wf-16s/in/ITS-trim); do
   fi
 done
 ```
+
+***Plot***
+
+Results were plotted as a stacked bar plot:
+
 ```bash
 #plot stacked barplots
 module load apptainer/1.4.1-gcc-13.3.0-3coysxn
@@ -1036,16 +1174,18 @@ ax.legend(handles[::-1], labels[::-1], title=args.level,
 plt.tight_layout()
 
 )
-
 ```
 
-## EMU
+### EMU - unfiltered <a name="14"></a>
 
 Emu is a relative abundance estimator for 16S genomic sequences. The method is optimized for error-prone full-length reads, but can also be utilized for short-read data.
 
-known to overinflate diversity, also reported to capture more taxa in mock dataset than alternatives.
+EMU is known to overinflate diversity, but is also reported to capture more taxa in mock dataset than alternatives.
 
-Download databases, from https://osf.io/32sh5/overview and https://osf.io/56uf7/overview :
+ERROR: Classification was initially performed on reads without primer trimming or quality filtering.
+
+***Reference Databases***
+Databases were downloaded, from https://osf.io/32sh5/overview and https://osf.io/56uf7/overview :
 
 ```bash
 #Updated emu rrnDB v5.10 and NCBI March 2026 courtesy of @UFDuttonLab [01/04/2026]
@@ -1088,6 +1228,10 @@ cd ../unite-all
 osf -p 56uf7 fetch osfstorage/emu-prebuilt/unite-all.tar
 tar -xvf unite-all.tar
 ```
+
+***16S***
+
+Different reference databases were trialled for the 16S data:
 ```bash
 for Dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basecalls/); do
   Task=emu
@@ -1184,9 +1328,13 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/16S/basec
     echo "For $ID found: $ExpectedOutput" 
   fi
 done
+```
 
-###################################################################################################################
+***ITS***
 
+Different reference databases were trialled for the ITS data:
+
+```bash
 for Dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/); do
   Task=emu
   InDir="$Dir"
@@ -1283,16 +1431,22 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basec
   fi
 done
 ```
+There are several types of unclassified reads in the EMU output, "unmapped" reads are reads that did not result in a mapping to the provided database with minimap2. "Filtered mapped" reads are those that were mapped with minimap2, but all alignments for the given query (read) were filtered via the align-len and percent identity (pid) requirement parameters. "Unclassified mapped" reads are those that mapped only to database sequences of species that are presumed to not be present in the sample by Emu's algorithm (likely due to low overall abundance).
 
-"unmapped" reads are reads that did not result in a mapping to the provided database with minimap2. "Filtered mapped" reads are those that were mapped with minimap2, but all alignments for the given query (read) were filtered via the align-len and percent identity (pid) requirement parameters. "Unclassified mapped" reads are those that mapped only to database sequences of species that are presumed to not be present in the sample by Emu's algorithm (likely due to low overall abundance).
+For ITS reads some samples have a large proportion of reads that do not map to anything in the reference datasets.
 
+***Plot***
+
+Krona plots:
 ```bash
 #plot krona plots
 sbatch ~/git_repos/Wrappers/unibz/run_krona.sh /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1 /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1/krona
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1 /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1/krona Control2 /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1/Control.txt
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1 /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1/krona Insecicide Insecicide.txt
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1 /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1/krona Microsap Microsap.txt
-
+```
+Stacked bar plots, heatmap plots, and PCoA plots:
+```bash
 echo sample,group,color > metadata.csv
 echo SHBB01881-1,Control,#1f77b4 >> metadata.csv
 echo SHBB01881-2,Control,#1f77b4 >> metadata.csv
@@ -1348,7 +1502,20 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
 
 done
 ```
-***Repeat EMU with filtered reads***
+
+### EMU - filtered <a name="16"></a>
+
+Emu is a relative abundance estimator for 16S genomic sequences. The method is optimized for error-prone full-length reads, but can also be utilized for short-read data.
+
+EMU is known to overinflate diversity, but is also reported to capture more taxa in mock dataset than alternatives.
+
+Reference datasets were downloaded previously and trialled with unfiltered data.
+
+### EMU <a name="17"></a>
+
+***16S***
+
+The primer-trimmed, quality-filtered 16S data were classified:
 
 ```bash
 for Dir in $(ls -d /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/); do
@@ -1377,9 +1544,13 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/qc_data/minion/16S/baseca
     echo "For $ID found: $ExpectedOutput" 
   fi
 done
+```
 
-###################################################################################################
+***ITS***
 
+The primer-trimmed, quality-filtered ITS data were classified:
+
+```bash
 for Dir in $(ls -d /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/); do
   Task=emu
   InDir="$Dir"
@@ -1407,7 +1578,10 @@ for Dir in $(ls -d /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/baseca
   fi
 done
 ```
-Plot for different runs:
+
+***Plot***  <a name="19"></a>
+
+Krona plots:
 ```bash
 module load apptainer/1.4.1-gcc-13.3.0-3coysxn
 for InDir in $(ls -d /data/users/theaven/Ips_jam_project/emu/*/*/* | grep -v '/data/users/theaven/Ips_jam_project/emu/16S/emu2026/1' ); do
@@ -1416,6 +1590,11 @@ sbatch ~/git_repos/Wrappers/unibz/run_krona.sh "$InDir" "$InDir"/krona
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh "$InDir" "$InDir"/krona Control "$InDir"/Control.txt
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh "$InDir" "$InDir"/krona Insecicide "$InDir"/Insecicide.txt
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh "$InDir" "$InDir"/krona Microsap "$InDir"/Microsap.txt
+
+```
+Stacked bar plots - with and without unmapped, heatmap plots, and PCoA plots:
+```bash
+#metadata.csv file was created prviously for use with the unfiltered data
 
 for taxa_level in species genus family order class phylum; do
 
@@ -1467,6 +1646,8 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
 done
 done
 ```
+
+Retrieve unmapped stats:
 ```bash
 for InDir in /data/users/theaven/Ips_jam_project/emu/*/*/*/4; do
   cd "$InDir"
@@ -1496,9 +1677,93 @@ for f in *_rel-abundance.tsv; do
 done > unmapped_percentage.tsv
 done
 ```
-***16S***
 
-Stats and plotting in R - standardise with illumina workflow
+There are several types of unclassified reads in the EMU output, "unmapped" reads are reads that did not result in a mapping to the provided database with minimap2. "Filtered mapped" reads are those that were mapped with minimap2, but all alignments for the given query (read) were filtered via the align-len and percent identity (pid) requirement parameters. "Unclassified mapped" reads are those that mapped only to database sequences of species that are presumed to not be present in the sample by Emu's algorithm (likely due to low overall abundance).
+
+For ITS reads some samples have a large proportion of reads that do not map to anything in the reference datasets.
+
+#### ITSx <a name="31"></a>
+
+Luciano suggests splitting the long ITS reads into constituent ITS1 and ITS2 regions and seeing if these can be classified better and resolve the unmapped reads.
+
+```bash
+for file in $(find /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/ -name '*.trim.fastq' -type f | grep -v 'unclassified'); do
+  Task=ITSx
+  Samplesheet=/data/users/theaven/Ips_jam_project/nanovi/samplesheet-trim.csv
+  OutPrefix=$(awk -F',' -v f="$file" '$2==f {print $1}' "$Samplesheet")
+  OutDir="$(dirname $file)"/"$Task"/"$OutPrefix"
+  echo "$OutPrefix"
+  mkdir -p $OutDir
+  ExpectedOutput="$OutDir"/${OutPrefix}.ITS1.fasta
+
+  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  while [ "$Jobs" -gt 3 ]; do
+    sleep 300s
+    printf "."
+    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
+  done
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_ITSx.sh "$file" "$OutPrefix" "$OutDir")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+```
+
+The split ITS data were classified:
+
+```bash
+for fasta in $(ls -d /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/ITSx/*/*.ITS1.fasta); do
+  Task=emu
+  Amplicon=ITS
+  Type=map-ont
+  Database=/data/users/theaven/db/emu/unite-fungi
+  Max_len=2000
+  Min_len=0
+  Abundance=0.0001
+  OutDir=$(dirname $fasta)/"$Task"/ITS1
+  ExpectedOutput="$OutDir"/track.txt
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    mkdir -p $OutDir
+    ID=$(echo "$OutDir" | rev | cut -d '/' -f1 | rev)
+
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_EMU_fasta.sh "$fasta" "$OutDir" --Amplicon "$Amplicon" --database "$Database" --type "$Type" --max_len "$Max_len" --min_len "$Min_len" --abundance "$Abundance")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+
+for fasta in $(ls -d /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/ITSx/*/*.ITS2.fasta); do
+  Task=emu
+  Amplicon=ITS
+  Type=map-ont
+  Database=/data/users/theaven/db/emu/unite-fungi
+  Max_len=2000
+  Min_len=0
+  Abundance=0.0001
+  OutDir=$(dirname $fasta)/"$Task"/ITS2
+  ExpectedOutput="$OutDir"/track.txt
+
+  if [ ! -s "$ExpectedOutput" ]; then
+    mkdir -p $OutDir
+    ID=$(echo "$OutDir" | rev | cut -d '/' -f1 | rev)
+
+    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_EMU_fasta.sh "$fasta" "$OutDir" --Amplicon "$Amplicon" --database "$Database" --type "$Type" --max_len "$Max_len" --min_len "$Min_len" --abundance "$Abundance")
+    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
+  else
+    echo "For $ID found: $ExpectedOutput" 
+  fi
+done
+```
+This did not resolve the unmapped reads.
+
+#### Diversity analysis and plotting - 16S <a name="18"></a>
+
+In order to standardise with the illumina short-reads workflow for diversity analysis the EMU data were converted to a suitable input matrix format:
 ```bash
 cd /data/users/theaven/Ips_jam_project/emu/16S/silva/trim/4
 
@@ -1967,9 +2232,9 @@ pheatmap(
 )
 ```
 
-***ITS***
+#### Diversity analysis and plotting - ITS <a name="20"></a>
 
-Stats and plotting in R - standardise with illumina workflow
+In order to standardise with the illumina short-reads workflow for diversity analysis the EMU data were converted to a suitable input matrix format:
 ```bash
 cd /data/users/theaven/Ips_jam_project/emu/ITS/unite-all/trim/4
 
@@ -2431,12 +2696,15 @@ pheatmap(
 )
 ```
 
-## NanoVI
+### NanoVI - unfiltered <a name="21"></a>
+
 NanoVI is a Nextflow DSL2 pipeline that performs taxonomic classification of full-length 16S ribosomal RNA gene sequences generated by Oxford Nanopore Technologies long-read sequencing. It uses variational inference to estimate species-level relative abundances from alignment likelihoods computed via CIGAR string analysis. 
 
 From 10.64898/2026.03.07.710315 : NanoVI and Emu produced highly similar taxonomic profiles, successfully recovering all major taxa with appropriate relative abundances. In contrast, NanoCLUST and EPI2ME assigned a substantially larger fraction of reads to an "Other" category and failed to detect several key species.
 
 NanoVI includes a helper script to build a reference database directly from the GTDB SSU FASTA file. The script assigns one taxid per species, deduplicates identical 16S sequences, and outputs the files required by the pipeline.
+
+ERROR: Classification was initially performed on reads without primer trimming or quality filtering.
 
 ```bash
 #NanoVI includes a helper script to build a reference database directly from the GTDB SSU FASTA file. The script assigns one taxid per species, deduplicates identical 16S sequences, and outputs the files required by the pipeline:
@@ -2502,13 +2770,21 @@ for Input in $(ls -d /data/users/theaven/Ips_jam_project/nanovi/samplesheet.csv 
   fi
 done
 ```
+
+***Plot***
+
+Krona plots:
 ```bash
 #plot krona plots
 sbatch ~/git_repos/Wrappers/unibz/run_krona.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity/krona
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity/krona Control /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1/Control.txt
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity/krona Insecicide Insecicide.txt
 sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity/krona Microsap Microsap.txt
+```
 
+Stacked bar plots - with and without unmapped, heatmap plots, and PCoA plots:
+
+```bash
 for taxa_level in species genus family order class phylum; do
 
 #plot stacked barplots
@@ -2538,7 +2814,13 @@ apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/cluste
 
 done
 ```
-***Repeat nanovi with filtered reads***
+### NanoVI - filtered <a name="22"></a>
+
+NanoVI is a Nextflow DSL2 pipeline that performs taxonomic classification of full-length 16S ribosomal RNA gene sequences generated by Oxford Nanopore Technologies long-read sequencing. It uses variational inference to estimate species-level relative abundances from alignment likelihoods computed via CIGAR string analysis. 
+
+From 10.64898/2026.03.07.710315 : NanoVI and Emu produced highly similar taxonomic profiles, successfully recovering all major taxa with appropriate relative abundances. In contrast, NanoCLUST and EPI2ME assigned a substantially larger fraction of reads to an "Other" category and failed to detect several key species.
+
+NanoVI includes a helper script to build a reference database directly from the GTDB SSU FASTA file. The script assigns one taxid per species, deduplicates identical 16S sequences, and outputs the files required by the pipeline.
 
 ```bash
 #Create the input samplesheet:              
@@ -2591,8 +2873,51 @@ for Input in $(ls -d /data/users/theaven/Ips_jam_project/nanovi/samplesheet-trim
   fi
 done
 ```
+***Plot***
 
-## UNIFRAC
+Krona plots:
+```bash
+#plot krona plots
+sbatch ~/git_repos/Wrappers/unibz/run_krona.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/krona
+sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/krona Control /data/users/theaven/Ips_jam_project/emu/16S/emu2026/1/Control.txt
+sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/krona Insecicide Insecicide.txt
+sbatch ~/git_repos/Wrappers/unibz/run_krona_group.sh /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/sample_outputs /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/krona Microsap Microsap.txt
+```
+
+Stacked bar plots - with and without unmapped, heatmap plots, and PCoA plots:
+
+```bash
+for taxa_level in species genus family order class phylum; do
+
+#plot stacked barplots
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/plot_emu_abundance.py \
+  -i /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/sample_outputs \
+  -l "$taxa_level" \
+  -n 9 \
+  --output /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/stacked-barplot_"$taxa_level".svg \
+  --order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
+
+#plot heatmap plots
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/plot_taxa_heatmap.py \
+  -i /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/sample_outputs \
+  -o /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim \
+  -l "$taxa_level" \
+  --log \
+  --top_n 50 \
+  --sample_order SHBB01881-1 SHBB01881-2 SHBB01881-3 SHBB01884-3 SHBB01887-2 SHBB01890-1 SHBB01895-1 SHBB01900-1 SHBB01888-1 SHBB01888-3 SHBB01888-4 SHBB01889-1 SHBB01891-1 SHBB01910-1 SHBB01914-1 SHBB01915-1 SHBB01882-1 SHBB01882-2 SHBB01882-4 SHBB01898-1 SHBB01899-1 SHBB01903-1 SHBB01909-1 SHBB01911-1
+
+#PCoA
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/emu_plot_pcoa.py \
+  -i /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim/sample_outputs \
+  -o /data/users/theaven/Ips_jam_project/nanovi/results/singularity-trim \
+  -l "$taxa_level" \
+  --metadata metadata.csv
+
+done
+```
+
+### UNIFRAC <a name="23"></a>
 
 UniFrac is a phylogeny-based distance metric, instead of just comparing abundance tables, it compares how evolutionarily related the organisms in each sample.
 
@@ -2622,15 +2947,11 @@ The adaptor trimmed data was filtered using filtlong with the settings --min_len
 
 For VSEARCH, sequences were processed using v.2.22.1  (Rognes et al., 2016). The CCS or UMI consensus sequences were  first dereplicated with the vsearch --derep_fulllength command  with the --sizeout and --relabel uniq options and then denoised  to resolve ASVs using first the vsearch -cluster_unoise command  with the --minsize option ranging from 2 to 8. Chimeras were finally detected and removed using the vsearch --uchime3_denovo  command.
 
-Dorado (basecalling + adapter trimming)
-→ Cutadapt (primer trimming)
-→ Length filtering (e.g. 1200–1800 bp for 16S)
-→ Optional: filtlong (moderate filtering)
-→ EMU / NanoVI / wf-16s
-
-#### Vsearch
+#### Vsearch - unoise <a name="24"></a>
 
 10.1111/1755-0998.13991 use vsearch and usearch to genertate OTUs with unoise, others use usearch 10.1093/pnasnexus/pgae411 with unoise algorithms, they report good results with these denoising algorithms despite being designed for illumina data (DADA2 is bad) - these are with UMI nanopore data...
+
+***16S***
 ```bash
 srun -p bioagri  -c 4 --mem 16G --pty bash
 module load anaconda3
@@ -2639,26 +2960,6 @@ conda activate vsearch
 #Dereplicate, denoise, de-chimera
 #With minsize 1
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
-  OutDir="$(dirname "$Reads")/vsearch"
-  mkdir -p "$OutDir"
-  seqtk seq -A "$Reads" > tmp.fasta
-  vsearch --derep_fulllength tmp.fasta \
-    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --sizeout \
-    --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-
-  vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --minsize 1 --id 0.97 \
-    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
-    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-
-  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
-    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.nonchimera.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
-done
-
-for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
   OutDir="$(dirname "$Reads")/vsearch"
   mkdir -p "$OutDir"
   seqtk seq -A "$Reads" > tmp.fasta
@@ -2698,7 +2999,34 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/Cu
     --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.nonchimera.fa" \
     --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
 done
+```
 
+***ITS***
+
+```bash
+#Dereplicate, denoise, de-chimera
+#With minsize 1
+for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
+  OutDir="$(dirname "$Reads")/vsearch"
+  mkdir -p "$OutDir"
+  seqtk seq -A "$Reads" > tmp.fasta
+  vsearch --derep_fulllength tmp.fasta \
+    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --sizeout \
+    --relabel uniq \
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
+
+  vsearch -cluster_unoise "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --minsize 1 --id 0.97 \
+    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
+    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
+
+  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.fa" \
+    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1.nonchimera.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1.log"
+done
+
+#With minsize 2
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
   OutDir="$(dirname "$Reads")/vsearch"
   mkdir -p "$OutDir"
@@ -2718,8 +3046,10 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/Cu
     --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2.nonchimera.fa" \
     --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2.log"
 done
+```
 
-
+Collect stats:
+```bash
 for file in /data/users/theaven/Ips_jam_project/qc_data/minion/*/basecalls/CutAdapt/Filtlong/vsearch/*_1.log /data/users/theaven/Ips_jam_project/qc_data/minion/*/basecalls/CutAdapt/Filtlong/vsearch/*_2.log; do
 OutFile=$(dirname $file)/minsize_$(basename $file | cut -d '_' -f2 | sed 's@.log@@g')_stats.tsv
 if [[ ! -f "$OutFile" ]]; then
@@ -2754,9 +3084,14 @@ total_sequences=$(cat "$file" | grep -oP 'in \K[0-9]+ total sequences' | grep -o
 echo -e "$ID\t$sequences\t$min\t$max\t$avg\t$unique_sequences\t$discarded_sequences\t$percentage_discarded\t$clusters\t$cluster_avg\t$cluster_max\t$singletons\t$percent_seqs\t$percent_clusters\t$min2\t$max2\t$avg2\t$chimeras\t$non_chimeras\t$total_sequences" >> "$OutFile"
 done 
 ```
-dataset had massive sequence-level noise
+The 16S/ITS datasets had massive sequence-level noise, moving from minsize 1 to 2 results in most of the reads/clusters being dropped - ie. most clusters contain only one read - most reads are unique. Presumably this is a result of higher error rate ONT reads.
 
-Try clustering with course grouping by similarity alone - no denoising.
+#### Vsearch - w/o unoise <a name="25"></a>
+
+Try clustering with course grouping by similarity alone - no denoising:
+
+***16S***
+
 ```bash
 srun -p bioagri  -c 4 --mem 16G --pty bash
 module load anaconda3
@@ -2765,27 +3100,6 @@ conda activate vsearch
 #Dereplicate, de-chimera
 #With minsize 1
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
-  OutDir="$(dirname "$Reads")/vsearch"
-  mkdir -p "$OutDir"
-  seqtk seq -A "$Reads" > tmp.fasta
-  vsearch --derep_fulllength tmp.fasta \
-    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --sizeout \
-    --relabel uniq \
-    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
-
-  vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
-    --id 0.97 --strand both --sizein --sizeout \
-    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
-    --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.uc" \
-    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
-
-  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
-    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.nonchimera.fa" \
-    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
-done
-
-for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
   OutDir="$(dirname "$Reads")/vsearch"
   mkdir -p "$OutDir"
   seqtk seq -A "$Reads" > tmp.fasta
@@ -2827,7 +3141,35 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/Cu
     --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.nonchimera.fa" \
     --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 done
+```
 
+***ITS***
+
+```bash
+#Dereplicate, de-chimera
+#With minsize 1
+for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
+  OutDir="$(dirname "$Reads")/vsearch"
+  mkdir -p "$OutDir"
+  seqtk seq -A "$Reads" > tmp.fasta
+  vsearch --derep_fulllength tmp.fasta \
+    --output "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --sizeout \
+    --relabel uniq \
+    --threads 1 2>&1 | tee "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+
+  vsearch --cluster_size "$OutDir/$(basename "$Reads" .fastq.gz).unique.fa" \
+    --id 0.97 --strand both --sizein --sizeout \
+    --centroids "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
+    --uc "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.uc" \
+    --threads 4 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+
+  vsearch --uchime3_denovo "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.fa" \
+    --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-1cs.nonchimera.fa" \
+    --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_1cs.log"
+done
+
+#With minsize 2
 for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.fastq.gz; do
   OutDir="$(dirname "$Reads")/vsearch"
   mkdir -p "$OutDir"
@@ -2848,7 +3190,10 @@ for Reads in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/Cu
     --nonchimeras "$OutDir/$(basename "$Reads" .fastq.gz).centroids-2cs.nonchimera.fa" \
     --threads 1 2>&1 | tee -a "$OutDir/$(basename "$Reads" .trim.filtlong.fastq.gz)_2cs.log"
 done
+```
 
+Collect stats:
+```bash
 for file in /data/users/theaven/Ips_jam_project/qc_data/minion/*/basecalls/CutAdapt/Filtlong/vsearch/*cs.log; do
 OutFile=$(dirname $file)/minsize_$(basename $file | cut -d '_' -f2 | sed 's@.log@@g')_stats.tsv
 if [[ ! -f "$OutFile" ]]; then
@@ -2885,9 +3230,9 @@ done
 ```
 Still high levels of noise - many OTUs with minsize 1, with minsize 2 >95% of reads are dropped due to high error rate of nanopore reads.
 
-#### Kraken
+#### Kraken <a name="26"></a>
 
-Kraken has been run within the EPI2ME pipeline - this missassigned arthopoda reads based on the results of the other classigfication tools. Will try running seperetedly with different databases.
+Kraken has been run within the EPI2ME pipeline, this missassigned arthopoda reads in the ITS dataset - based on the results of the other classification tools. Will try running seperetedly with different databases.
 
 ```bash
 for Reads in $(ls /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/Filtlong/*.trim.filtlong.fastq.gz | grep -v 'unclassified\|code24'); do
@@ -2946,6 +3291,19 @@ ExpectedOutput="$OutDir"/"$OutPrefix"_report.txt
 
 done
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3027,9 +3385,47 @@ qiime diversity beta-phylogenetic \
   --p-metric weighted_unifrac
 ```
 
-### BLASTN <a name="12"></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### BLASTN <a name="27"></a>
+
+Classification via BLAST of trimmed/filtered reads.
 
 BLAST is alignment based, limited by 'best hit' interpretation, and prone to misidentifying short or conserved seqeunces. For eDNA/metabarcoding, BLAST is often too literal — it finds the closest sequence, even if it’s wrong. However, the NCBI nt database is far larger than any dedicated database, including SILVA.
+
+#### BLAST <a name="28"></a>
 
 BLASTN vs NCBI nt database:
 ```bash
@@ -3069,29 +3465,11 @@ for ASV in $(find /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecal
   fi
 done
 ```
+
+#### Taxonkit <a name="31"></a>
+
 Get LCA of BLAST hits for each read and collate into abundance table:
-```bash
-module load apptainer/1.4.1-gcc-13.3.0-3coysxn
 
-for file in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/*.vs.nt.mts10.hsp1.1e25.megablast.out; do
-  mkdir $(dirname "$file")/LCA
-awk 'BEGIN{OFS="\t"} {
-print $1,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$3,$2,$14
-}' "$file" | sed '1d' > $(dirname "$file")/LCA/$(basename "$file")
-
-cuttoff_rank=family 
-apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/ncbi_blast_2_lca.py \
-  --input $(dirname "$file")/LCA/$(basename "$file") \
-  --nodes /data/users/theaven/db/blastn/taxonomy_db/nodes.dmp \
-  --names /data/users/theaven/db/blastn/taxonomy_db/names.dmp \
-  --outdir $(dirname "$file")/LCA \
-  --min-rank "$cuttoff_rank"
-
-sed -i 's/ /_/g' $(dirname "$file")/LCA/$(basename "$file" | sed 's@.out@@g').min-"$cuttoff_rank".lca.tsv
-
-awk 'NR>1 {sum += $8} END {print sum}' $(dirname "$file")/LCA/$(basename "$file" | sed 's@.out@@g').min-"$cuttoff_rank".lca.tsv
-done
-```
 ```bash
 module load anaconda3
 conda activate taxonkit
@@ -3122,6 +3500,10 @@ done
 cut -f1,2 /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.out > /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/lca/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.tsv
 taxonkit lca /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/lca/SHBB01898-1.vs.nt.mts10.hsp1.1e25.megablast.tsv
 ```
+#### MEGAN <a name="29"></a>
+
+Get LCA with MEGAN:
+
 ```bash
 module load anaconda3
 conda activate megan
@@ -3147,11 +3529,6 @@ done
 
 #  -mdb /data/users/theaven/db/megan/megan-nr-r2.mdb \
 
-
-
-
-
-
 awk 'NR>1 {sum += $8} END {print sum}' /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/LCA/id_counts.tsv
 
 awk 'NR>1 {sum += $8} END {print sum}' temp.tsv
@@ -3168,6 +3545,7 @@ END {
     } 
 }' /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/LCA/SHBB01903-1.vs.nt.mts10.hsp1.1e25.megablast.min-family.LCA_per_read.debug.tsv | sort -t$'\t' -k8,8nr
 ```
+Get counts for each taxon path:
 ```python
 from collections import defaultdict
 
@@ -3191,6 +3569,11 @@ with open("id_counts.tsv", "w") as out:
         proportion = c / total if total else 0
         out.write("\t".join(map(str, key)) + f"\t{c}\t{proportion}\n")
 ````
+
+#### Custom script - LCA <a name="30"></a>
+
+Custom Python implementation of the LCA-based taxonomic classification and abundance calculation - takes BLAST hits for each ITS read, keeps the hits that are within 90% of that read's best bit score, finds the common ancestor of their taxonomic IDs, and then counts reads assigned to each resulting taxon. 
+
 ```python
 import pandas as pd
 from collections import defaultdict
@@ -3310,40 +3693,36 @@ abundance.to_csv("lca_abundance.tsv", sep="\t", index=False)
 
 print(abundance.head(20))
 ```
+If one hit is poorly annotated in the NCBI database, eg. "unclassified bacteria" this pulls down the specificity for all of the cluster in the LCA.
 
-### ITSx
-
-Luciano suggests splitting the long ITS reads into constituent ITS1 and ITS2 regions and seeing if these can be classified better.
-
+Consider only hits to a certain rank:
 ```bash
-for file in $(find /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/ -name '*.trim.fastq' -type f | grep -v 'unclassified'); do
-  Task=ITSx
-  Samplesheet=/data/users/theaven/Ips_jam_project/nanovi/samplesheet-trim.csv
-  OutPrefix=$(awk -F',' -v f="$file" '$2==f {print $1}' "$Samplesheet")
-  OutDir="$(dirname $file)"/"$Task"/"$OutPrefix"
-  echo "$OutPrefix"
-  mkdir -p $OutDir
-  ExpectedOutput="$OutDir"/${OutPrefix}.ITS1.fasta
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
 
-  Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
-  while [ "$Jobs" -gt 3 ]; do
-    sleep 300s
-    printf "."
-    Jobs=$(squeue -h -u theaven -n "$Task" | wc -l)
-  done
+for file in /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/blast/*.vs.nt.mts10.hsp1.1e25.megablast.out; do
+  mkdir $(dirname "$file")/LCA2
+#awk 'BEGIN{OFS="\t"} {
+#print $1,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$3,$2,$14
+#}' "$file" | sed '1d' > $(dirname "$file")/LCA/$(basename "$file")
 
-  if [ ! -s "$ExpectedOutput" ]; then
-    jobid=$(sbatch --job-name="$Task" --parsable ~/git_repos/Wrappers/unibz/run_ITSx.sh "$file" "$OutPrefix" "$OutDir")
-    printf "%s\t%s\t "$Task" \t%s\n" "$(date -Iseconds)" "$ID" "$jobid" >> /home/clusterusers/theaven/slurm_log.tsv
-  else
-    echo "For $ID found: $ExpectedOutput" 
-  fi
+cuttoff_rank=family 
+apptainer exec --bind /data:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/python3.sif python ~/git_repos/Scripts/unibz/ncbi_blast_2_lca.py \
+  --input $(dirname "$file")/LCA/$(basename "$file") \
+  --nodes /data/users/theaven/db/blastn/taxonomy_db/nodes.dmp \
+  --names /data/users/theaven/db/blastn/taxonomy_db/names.dmp \
+  --outdir $(dirname "$file")/LCA2 \
+  --min-rank "$cuttoff_rank"
+
+sed -i 's/ /_/g' $(dirname "$file")/LCA/$(basename "$file" | sed 's@.out@@g').min-"$cuttoff_rank".lca.tsv
+
+awk 'NR>1 {sum += $8} END {print sum}' $(dirname "$file")/LCA/$(basename "$file" | sed 's@.out@@g').min-"$cuttoff_rank".lca.tsv
 done
 ```
+Results are still unhelpful.
 
-## Illumina sequencing
+## Illumina - short reads - 1st round <a name="32"></a>
 
-### Collecting data
+### Collecting data <a name="33"></a>
 
 Raw sequencing reads were retreived from the archive folder \\share.unibz.it\AppliedMolecularEntomologyLab\ips_typographus\Illumina_16S_ITS and uploaded to the HPC:
 ```bash
@@ -3357,10 +3736,12 @@ done
 ```
 Sample metadata is here: "\\share.unibz.it\AppliedMolecularEntomologyLab\ips_typographus\Illumina_16S_ITS\Illumina_Ips_sequencing_list.xlsx"
 
-## Quality Control and ASV Inference 
+### Quality Control and ASV Inference <a name="34"></a>
 
-### FastQC 
+#### FastQC  <a name="35"></a>
+
 The raw sequence reads were subjected to a quality control check using FastQC.
+
 ```bash
 module load anaconda3
 conda activate seqkit-2.10
@@ -3388,10 +3769,13 @@ for ReadDir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/illumina/*/*
   fi
 done
 ```
-### Cutadapt  
+#### Cutadapt   <a name="36"></a> 
+
 Primers were removed from the reads where present using Cutadapt. Primers used by Macrogen for the 16S V3-V4 and ITS3-ITS4 region are given at https://www.macrogen-europe.com/service/metagenome-sequencing
 
 NOTE:The reads are a mix of paired and single end samples.
+
+***16S***
 ```bash
 screen -r melanoneura
 for ReadDir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/illumina/16S/*); do
@@ -3417,7 +3801,11 @@ for ReadDir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/illumina/16S
     echo "For $ID found: $ExpectedOutput" 
   fi
 done
+```
 
+***ITS***
+
+```bash
 for ReadDir in $(ls -d /data/users/theaven/Ips_jam_project/raw_data/illumina/ITS/*); do
   Task=CutAdapt
   ID=$(echo "$ReadDir" | cut -d '/' -f9 | sed 's@/@_@g')
@@ -3444,7 +3832,8 @@ done
 
 seqkit stats /data/users/theaven/Ips_jam_project/qc_data/illumina/*/*/CutAdapt/*fastq.gz
 ```
-### DADA2  <a name="7"></a>
+#### DADA2  <a name="37"></a>
+
 The denoiser tool DADA2 was run to model and remove error patterns from the Illumina data: read ends where quality drops were trimmed, reads with high expected error (EE), or above a max EE threshold, or with any ambiguous bases (N) were discarded. DADA2’s removeBimeraDenovo function was also used to remove chimera from the ASV table. For paired reads DADA2 also merges forward and reverse reads in the overlapping region. When F and R disagree, the merge algorithm uses quality scores to pick the most likely base or discards the read. The output of DADA2 is an Alternative Sequence Variant (ASV) table as well as filtered denoised read fastq files.
 
 DADA2 is an R package, the relavent files were downloaded:
@@ -3762,7 +4151,8 @@ names(dna) <- asv_headers
 Biostrings::writeXStringSet(dna, "download_20260529/ASVs/ASVs_its.fasta")
 write.csv(data.frame(ASV=asv_headers, Sequence=asv_seqs), "download_20260529/ASVs/ASV_its_id_map.csv", row.names = FALSE)
 ```
-### QIIME - plot
+#### QIIME - plot <a name="38"></a>
+
 Plot rarefaction curve with qiime
 
 Prepare inputs DADA2(R) -> QIIME2(HPC):
@@ -3952,11 +4342,11 @@ apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime diversity
 ```
 ![Rarefaction curves for ITS seqeunces](figures/rarefaction-its.png)
 
-## Taxonomy Assignment <a name="9"></a>
+## Taxonomy Assignment <a name="39"></a>
 
 Ready-made IDTAXA training set is publically available for SILVA SSU and was downloaded from https://www2.decipher.codes/Downloads.html - Accessed 07/06/2026 - "   SILVA SSU r138.2 (modified) " and "   UNITE 2025 (unmodified) "
 
-### IDTAXA <a name="10"></a>
+### IDTAXA <a name="40"></a>
 
 IDTAXA (DECIPHER package in R) - probabilistic sequence classification, model-based learning - usually more accurate and conservative than BLAST or naive Bayes. IDTAXA does not require trimming and handles full-length sequences correctly. IDTAXA is slower than QIIME2 NB, but usually much more accurate. If trained on full-length, IDTAXA often backs off to a safer rank rather than confidently guessing too deep.
 
@@ -4079,7 +4469,7 @@ write.table(
   row.names = FALSE
 )
 ```
-### Curate
+#### Curate <a name="41"></a>
 
 Curate the taxonomy file: replace g_endosymbionts with g_unclassified_f, replace Incertae Sedis entries with x_unclassified_x, propogate x_unclassified_x entries down ranks. 
 Data entry error for ASV370 - repeat
@@ -4146,9 +4536,9 @@ apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif bi
 
 ```
 
-### Plot
+### Diversity analysis and plotting <a name="42"></a>
 
-**16S**
+### 16S <a name="43"></a>
 
 ```bash
 apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa barplot \
@@ -4635,7 +5025,7 @@ pheatmap(
 )
 ```
 
-**ITS**
+### ITS <a name="44"></a>
 
 ```bash
 apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime taxa barplot \
