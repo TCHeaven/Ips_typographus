@@ -37,6 +37,10 @@ All commands executed from /data/users/theaven/Ips_jam_project unless othewise s
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.2 [Taxonkit - LCA](#30)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.3 [MEGAN - LCA](#29)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.4 [Custom script - LCA](#30)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8 [Savont](#46)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.1 [Savont ASV generation](#47)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.2 [IDTAXA Classification](#48)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.x [Other/Working](#45)<br>
 3. [Illumina - short reads - 1st round](#32)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;3.1 [Collecting data](#33)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;3.2 [Quality Control and ASV Inference](#34)<br>
@@ -1863,6 +1867,8 @@ tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
 
 ps_genus <- tax_glom(ps, taxrank = "Genus")
 ps_genus <- subset_taxa(ps_genus, !Genus %in% c("unmapped", "filtered", "unclassified")) #remove unmapped
+ps_genus <- subset_taxa(ps_genus, !Genus %in% c("unclassified_Mitochondria",
+                                                "unclassified_Chloroplast"))
 
 ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
 
@@ -1904,6 +1910,8 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
 ```
+![R Relative abundance plots for 16S seqeunces](figures/emu-16s-2.png)
+
 Alpha diversity:
 ```R
 get_alpha <- function(ps_obj, meta_obj) {
@@ -2376,6 +2384,8 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
 ```
+![R Relative abundance plots for ITS seqeunces](figures/emu-1ts.png)
+
 Alpha diversity:
 ```R
 get_alpha <- function(ps_obj, meta_obj) {
@@ -3292,133 +3302,6 @@ ExpectedOutput="$OutDir"/"$OutPrefix"_report.txt
 done
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Nanoclust
-medaka/racon
-```bash
-#edit nextflow.config to contain conda.enabled = true
-
-module load anaconda3
-module load openjdk/17.0.11_9-none-none-2c62zhf
-rm /home/clusterusers/theaven/tools/NanoCLUST/results/pipeline_info/execution_trace.txt
-/home/clusterusers/theaven/tools/NanoCLUST/nextflow.1 run main.nf -profile test,conda
-```
-https://bugseq.com/free.
-
-nanoASV
-RAMBO
-CONCOMPRA
-
-- only takes one primer pair at once... this seems stupid design as the nanopore amplicon kit contains a primer mix and this will therefore be the situation for the vast majority of potential users.
-
-primer-chop does not support degenerate bases
-```bash
-
-screen -S concompra
-srun -p bioagri  -c 8 --mem 32G --pty bash
-module load apptainer/1.4.1-gcc-13.3.0-3  
-apptainer pull concompra.sif docker://willemstock/concompra:version0.0.2
-mkdir /data/users/theaven/Ips_jam_project/concompra/ITS
-cd /data/users/theaven/Ips_jam_project/concompra/ITS
-
-#symlinked files not sufficient
-cp /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/*.fastq /data/users/theaven/Ips_jam_project/concompra/ITS/.
-
-echo TEMPLATE_DIR="/opt/CONCOMPRA/scripts" > /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
-echo PRIMER_SET="/data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa" >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
-echo MIN=300 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
-echo MAX=1500 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
-echo MERGE_CONSENSUS=0.97 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
-echo READS_CONSENSUS=120 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
-echo THREADS=8 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
-
-echo ">head" > /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
-echo TCCGTAGGTGAACCTGCGG >> /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
-echo ">tail" >> /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
-echo GCATATCAATAAGCGGAGGA >> /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
-
-#run the image, pointing to a local directory with has the (compressed) fastq files, the directory_list.txt (adjust the parameters but not the directories in this file) and the primer_set.fa (with the appropriate primer+anchor sequences) files
-apptainer run --bind /data/users/theaven/Ips_jam_project/concompra/ITS:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/concompra.sif 
-```
-```bash
-apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime phylogeny
-
-#demoising step:
-qiime dada2 denoise-paired \
-  --i-demultiplexed-seqs demux.qza \
-  --o-table table.qza \
-  --o-representative-sequences rep-seqs.qza \
-  --o-denoising-stats stats.qza
-
-#phylogeny estimation
-  qiime phylogeny align-to-tree-mafft-iqtree \
-  --i-sequences rep-seqs.qza \
-  --o-alignment aligned-rep-seqs.qza \
-  --o-masked-alignment masked-aligned-rep-seqs.qza \
-  --o-tree unrooted-tree.qza \
-  --o-rooted-tree rooted-tree.qza
-
-qiime diversity core-metrics-phylogenetic \
-  --i-table table.qza \
-  --i-phylogeny tree.qza \
-  --p-sampling-depth 1000 \
-  --m-metadata-file metadata.tsv \
-  --output-dir core-metrics
-
-qiime diversity beta-phylogenetic \
-  --i-table table.qza \
-  --i-phylogeny tree.qza \
-  --p-metric weighted_unifrac
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### BLASTN <a name="27"></a>
 
 Classification via BLAST of trimmed/filtered reads.
@@ -3719,6 +3602,1260 @@ awk 'NR>1 {sum += $8} END {print sum}' $(dirname "$file")/LCA/$(basename "$file"
 done
 ```
 Results are still unhelpful.
+
+### Savont <a name="46"></a>
+
+#### Savont ASV generation <a name="47"></a>
+
+Savont generates Amplicon Sequence Variants (ASVs) at single-nucleotide resolution from long-read amplicon sequencing data such as ONT. Savont differs from mapping-based approaches (e.g. Emu or ONT's epi2me workflow). Savont instead follows the Reads -> ASV -> Classification paradigm (just like DADA2, but for noisier long reads).
+
+***16S***
+
+```bash
+srun  -p bioagri  -c 16 --mem=64G --account=shame --pty bash 
+
+module load apptainer/1.4.1-gcc-13.3.0-3coysxn
+module load anaconda3
+conda activate /data/users/theaven/conda/envs/savont
+
+#Calculate ASVs:
+mapfile -d '' Reads < <(
+    find /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/ \
+        -name '*.trim.fastq' \
+        -type f \
+        ! -name '*unclassified*' \
+        -print0
+)
+
+printf '%s\n' "${Reads[@]}"
+
+savont asv --fl-16s --threads 16 --pooled-samples "${Reads[@]}"  \
+--output-dir /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont \
+--no-band \
+--min-read-length 800 \
+--max-read-length 2000 \
+--quality-value-cutoff 98 \
+--minimum-base-quality 25 \
+--min-cluster-size 12 \
+--n-depth-cutoff 250 \
+--posterior-threshold-ln 30 \
+--chimera-allowable-errors 1 \
+--chimera-detect-length 200
+
+#Classify ASVs:
+savont download --location /data/users/theaven/db/savont --dbs greengenes2-2024.09 emu-1 silva-138.2 unite-10.0
+
+savont classify -t 16 \
+-i /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont \
+-d /data/users/theaven/db/savont/emu-1 \
+-o /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/emu-1 \
+--species-threshold 99 \
+--genus-threshold 94.5 \
+--detailed-unclassified
+#Classification complete! Classified 610/631 ASVs
+#Classified 115/610 ASVs at species level
+#Classified 378/610 ASVs at genus level
+
+savont classify -t 16 \
+-i /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont \
+-d /data/users/theaven/db/savont/silva-138.2 \
+-o /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/silva-138.2 \
+--species-threshold 99 \
+--genus-threshold 94.5 \
+--detailed-unclassified
+#Classification complete! Classified 619/631 ASVs
+#Classified 249/619 ASVs at species level
+#Classified 498/619 ASVs at genus level
+
+#Export:
+ln -s /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/final_asvs.fasta /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/silva-138.2/.
+ln -s /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/feature-table.tsv /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/silva-138.2/.
+ln -s /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/final_assignments.tsv /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/silva-138.2/.
+savont export -i /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/silva-138.2 -o /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/export
+
+#Plot with QIIME
+ASV_dir=/data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/export
+
+printf '%s\n' \
+$'#SampleID\treal_sample_name\ttreatment' \
+$'barcode01.trim\tSHBB01881-1\tControl' \
+$'barcode02.trim\tSHBB01881-2\tControl' \
+$'barcode03.trim\tSHBB01881-3\tControl' \
+$'barcode04.trim\tSHBB01882-1\tInsecticide' \
+$'barcode05.trim\tSHBB01882-2\tInsecticide' \
+$'barcode06.trim\tSHBB01882-4\tInsecticide' \
+$'barcode07.trim\tSHBB01884-3\tControl' \
+$'barcode08.trim\tSHBB01887-2\tControl' \
+$'barcode09.trim\tSHBB01888-1\tMicrosap' \
+$'barcode10.trim\tSHBB01888-3\tMicrosap' \
+$'barcode11.trim\tSHBB01888-4\tMicrosap' \
+$'barcode12.trim\tSHBB01889-1\tMicrosap' \
+$'barcode13.trim\tSHBB01890-1\tControl' \
+$'barcode14.trim\tSHBB01891-1\tMicrosap' \
+$'barcode15.trim\tSHBB01895-1\tControl' \
+$'barcode16.trim\tSHBB01898-1\tInsecticide' \
+$'barcode17.trim\tSHBB01899-1\tInsecticide' \
+$'barcode18.trim\tSHBB01900-1\tControl' \
+$'barcode19.trim\tSHBB01903-1\tMicrosap' \
+$'barcode20.trim\tSHBB01909-1\tMicrosap' \
+$'barcode21.trim\tSHBB01910-1\tInsecticide' \
+$'barcode22.trim\tSHBB01911-1\tMicrosap' \
+$'barcode23.trim\tSHBB01914-1\tInsecticide' \
+$'barcode24.trim\tSHBB01915-1\tInsecticide' \
+> "$ASV_dir/sample-metadata.tsv"
+
+# Feature table
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+biom convert -i /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/export/merged_feature_table.tsv -o "$ASV_dir"/feature-table.biom --table-type='OTU table' --to-hdf5
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime tools import --type 'FeatureTable[Frequency]' --input-path "$ASV_dir"/feature-table.biom --output-path "$ASV_dir"/feature-table.qza
+
+# Representative sequences
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime tools import --type 'FeatureData[Sequence]' \
+--input-path /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/export/merged_rep_seqs.fasta --output-path "$ASV_dir"/rep-seqs.qza
+
+# If `savont classify / sintax` was run: ASV-level taxonomy (use with feature-table.qza for taxa barplot)
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime tools import --type 'FeatureData[Taxonomy]' --input-format TSVTaxonomyFormat \
+--input-path /data/users/theaven/Ips_jam_project/qc_data/minion/16S/basecalls/CutAdapt/savont/export/merged_asv_taxonomy.tsv --output-path "$ASV_dir"/taxonomy.qza
+
+# Remove chloroplast and mitochondria ASVs
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime taxa filter-table \
+  --i-table "$ASV_dir"/feature-table.qza \
+  --i-taxonomy "$ASV_dir"/taxonomy.qza \
+  --p-exclude Chloroplast,Mitochondria \
+  --o-filtered-table "$ASV_dir"/feature-table-no-organelle.qza
+
+# If `savont classify / sintax` was run: Taxonomy bar plot
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime taxa barplot --i-table "$ASV_dir"/feature-table-no-organelle.qza --i-taxonomy "$ASV_dir"/taxonomy.qza --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+--o-visualization "$ASV_dir"/taxa-bar-plots.qzv
+```
+
+![Relative abundance plots for 16S seqeunces](figures/Screenshot_2026-10-06_134844.png)
+
+Download to plot with R:
+```bash
+down_dir=/data/users/theaven/download_20261006
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/feature-table-no-organelle.qza \
+  --output-path "$ASV_dir"/exported-feature-table_16s
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i "$ASV_dir"/exported-feature-table_16s/feature-table.biom \
+  -o "$down_dir"/feature-table_16s.tsv \
+  --to-tsv
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/taxonomy.qza \
+  --output-path "$down_dir"/exported-taxonomy_16s
+
+cp "$ASV_dir"/sample-metadata.tsv "$down_dir"/.
+```
+Relative abundance:
+```R
+library(tibble)
+library(tidyr)
+library(phyloseq)
+
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+# Load table
+otu <- read.table("download_20261006/feature-table_16s.tsv", header=TRUE, row.names=1, sep="\t", comment.char="")
+otu <- as.matrix(otu)
+colnames(otu) <- gsub("\\.", "-", colnames(otu))
+
+# Load metadata
+meta <- read_tsv(
+  "download_20261006/sample-metadata.tsv",
+  comment = "",  
+  show_col_types = FALSE
+)
+meta <- column_to_rownames(meta, var = "#SampleID")
+rownames(meta) <- gsub("\\.", "-", rownames(meta))
+
+tax1 <- read.table("download_20261006/exported-taxonomy_16s/taxonomy.tsv", 
+                  header = TRUE, 
+                  sep = "\t", 
+                  row.names = 1)
+tax_split <- tax1 %>%
+  separate(Taxon, 
+           into = c("Kingdom","Phylum","Class","Order","Family","Genus","Species"), 
+           sep = ";", 
+           fill = "right")
+
+# Fill unclassified ranks with Unclassified_<most recent classified taxon>
+fill_unclassified <- function(x, fill_na = TRUE) {
+  last_good <- NA_character_
+  for (i in seq_along(x)) {
+    val <- x[i]
+    is_bad <- is.na(val) ||
+              val == "Incertae Sedis" ||
+              startsWith(val, "UNCLASSIFIED")
+    if (is_bad) {
+      if (is.na(val) && !fill_na) next
+      x[i] <- if (is.na(last_good)) "Unclassified" else paste0("Unclassified_", last_good)
+    } else {
+      last_good <- val
+    }
+  }
+  x
+}
+
+tax_clean <- tax_split
+tax_clean[] <- t(apply(tax_split, 1, fill_unclassified))
+tax_clean <- as.data.frame(tax_clean)
+
+# Create objects
+OTU <- otu_table(otu, taxa_are_rows=TRUE)
+SAM <- sample_data(meta)
+TAX <- tax_table(as.matrix(tax_clean))
+ps <- phyloseq(OTU, SAM, TAX)
+
+tax_table(ps) <- apply(tax_table(ps), 2, trimws)
+tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
+
+ps_genus <- tax_glom(ps, taxrank = "Genus")
+
+ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+
+df <- psmelt(ps_rel)
+
+taxa_abund <- tapply(df$Abundance, df$Genus, sum)
+
+top <- names(sort(taxa_abund, decreasing = TRUE))[1:13]
+
+df$Genus <- as.character(df$Genus)
+df$Genus[!df$Genus %in% top] <- "Other"
+
+df$Genus <- factor(df$Genus, levels = c(top, "Other"))
+
+#auto_cols <- setNames(c(
+#  "#008000", "wheat3", "darkblue", "sienna3", "deeppink4", "#ff00ec","skyblue3", "orange" ,"#9467bf", "red3" ,"#71c837" ,"#000000", "#4dfad8"
+#), top[1:length(top)])
+#final_cols <- c(auto_cols, "Other" = "grey80")
+
+  final_cols <- c(
+  "Erwinia" = "#008000",
+  "Pseudoxanthomonas" = "wheat3",
+  "Spiroplasma" = "darkblue",
+  "Stenotrophomonas" = "deeppink4",
+  "Wolbachia" = "deeppink4",
+  "Chryseobacterium" = "#ff00ec",
+  "Rahnella" = "#000000",
+  "Staphylococcus" = "#9467bf",
+  "Unclassified_Lachnospiraceae" = "orange",
+  "Pseudomonas" = "#71c837",
+  "Unclassified_Chitinophagaceae" = "red3",
+  "Enterobacter" = "white",
+  "Unclassified_Yersiniaceae" = "skyblue3",
+  "Other" = "grey80"
+)
+
+df_sub <- subset(df, treatment != "blank")
+
+df_sub$treatment <- as.character(df_sub$treatment)
+
+df_sub$Group <- paste(df_sub$treatment, df_sub$real_sample_name, sep = " ")
+df_sub$Label <- paste(df_sub$treatment, df_sub$real_sample_name)
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+df_sub <- df_sub[order(df_sub$treatment, df_sub$real_sample_name), ]
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = final_cols) +
+  scale_x_discrete(drop = FALSE) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
+```
+
+![R Relative abundance plots for 16S seqeunces](figures/savont-16s-3.png)
+
+Alpha diversity:
+```R
+meta_f <- meta[ !is.na(meta$treatment) & meta$treatment != "blank",  ,  drop = FALSE]
+
+ps_f <- prune_samples(rownames(meta_f), ps)
+meta_f <- meta_f[sample_names(ps_f), ,drop = FALSE]
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- estimate_richness(
+  ps_f,
+  measures = c(
+    "Shannon",
+    "Simpson",
+    "Chao1",
+    "Observed"
+  )
+)
+
+alpha_df$sample_id <- rownames(alpha_df)
+alpha_df$real_sample_name <- meta_f$real_sample_name
+alpha_df$treatment <- meta_f$treatment
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c(
+    "Control",
+    "Insecticide",
+    "Microsap"
+  )
+)
+
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment), width = 0.15, alpha = 0.7, size = 2) +
+  scale_fill_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  scale_color_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  labs(x = "Treatment", y = "Shannon diversity") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.7746 - normal
+#Insecticide - p-value = 0.8927 - normal
+#Microsap - p-value = 0.1935 - normal
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.51   -          
+#Microsap    0.51   0.51  
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  1.488  0.7439   0.994  0.387
+#Residuals   21 15.722  0.7487   
+#No statistically significant evidence that mean Shannon diversity differs among the three treatments.
+```
+![R alpha diversity plots for 16S seqeunces](figures/savont-16s-shannon.png)
+
+beta diversity:
+
+```R
+library(vegan)
+
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = real_sample_name),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.00322 0.0016113 0.0837    999  0.933
+#Residuals 21 0.40404 0.0192400 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.6253 0.07234 0.8188  0.725
+#Residual 21   8.0186 0.92766              
+#Total    23   8.6440 1.00000    
+#No significant difference in community composition between treatments, treatment explains only ~7.2% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.014491 0.0072453 0.9037    999  0.427
+#Residuals 21 0.168365 0.0080174
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.6647 0.09778 1.1379   0.19
+#Residual 21   6.1334 0.90222              
+#Total    23   6.7981 1.00000  
+#No significant difference in community composition between treatments, treatment explains ~9.8% of variation     
+```
+There were no differences in community composition between treatments. There are no significant differences in the presence/abscence of individual taxa either.
+
+![R beta diversity plots for 16S seqeunces](figures/savont-16s-bray.png)
+
+Presence/abscence + adundance - heatmap:
+```R
+library(pheatmap)
+
+tax_tab <- as.data.frame(tax_table(ps_f_genus))
+
+tax_names <- tax_tab$Genus
+tax_names[is.na(tax_names) | tax_names == ""] <- "Unknown"
+tax_names <- make.unique(tax_names)
+
+mat_asv <- mat
+colnames(mat_asv) <- tax_names
+
+mat_genus_rel <- sweep(mat_asv, 1, rowSums(mat_asv), "/")
+mat_genus_rel_log <- log10(mat_genus_rel + 1e-6)
+
+#Order samples
+meta_mat <- meta[rownames(mat_genus_rel_log), , drop = FALSE ]
+
+ord <- order(meta_mat$treatment)
+
+mat_ordered <- mat_genus_rel_log[ord, ]
+meta_ordered <- meta_mat[ord, , drop = FALSE  ]
+
+# --- Define colors: 0 = white, then blue → red ---
+# Avoid including 0 in gradient
+nonzero_vals <- mat_ordered[mat_ordered > 0]
+
+# --- Row annotations ---
+annotation_row <- data.frame(
+  Treatment = meta_ordered$treatment
+)
+
+rownames(annotation_row) <- rownames(mat_ordered)
+
+#Optional: gaps
+gaps <- cumsum(table(meta_ordered$treatment))
+
+pheatmap(
+  mat_ordered,
+  color = colorRampPalette(c("white", "blue", "red"))(100),
+  breaks = seq(
+    min(mat_ordered, na.rm = TRUE),
+    max(mat_ordered, na.rm = TRUE),
+    length.out = 101
+  ),
+  cluster_rows = FALSE,
+  cluster_cols = TRUE,
+  annotation_row = annotation_row,
+  gaps_row = gaps,
+  border_color = "grey90",
+  fontsize_col = 7,
+  labels_row = meta_ordered$real_sample_name
+)
+```
+![R heatmap presence/abscence plots for 16S seqeunces](figures/savont-16s-heat.png)
+
+***ITS***
+
+```bash
+#Calculate ASVs:
+mapfile -d '' Reads < <(
+    find /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/ \
+        -name '*.trim.fastq' \
+        -type f \
+        ! -name '*unclassified*' \
+        -print0
+)
+
+printf '%s\n' "${Reads[@]}"
+
+savont asv --fl-16s --threads 16 --pooled-samples "${Reads[@]}"  \
+--output-dir /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont \
+--no-band \
+--min-read-length 300 \
+--max-read-length 1500 \
+--quality-value-cutoff 98 \
+--minimum-base-quality 25 \
+--min-cluster-size 12 \
+--n-depth-cutoff 250 \
+--posterior-threshold-ln 30 \
+--chimera-allowable-errors 1 \
+--chimera-detect-length 150
+
+#Classify ASVs:
+savont classify -t 16 \
+-i /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont \
+-d /data/users/theaven/db/savont/unite-10.0 \
+-o /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/unite-10.0 \
+--species-threshold 99 \
+--genus-threshold 94.5 \
+--detailed-unclassified
+#Classified 232/273 ASVs
+#Classified 92/232 ASVs at species level
+#Classified 145/232 ASVs at genus level
+
+#Export:
+ln -s /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/final_asvs.fasta /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/unite-10.0/.
+ln -s /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/feature-table.tsv /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/unite-10.0/.
+ln -s /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/final_assignments.tsv /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/unite-10.0/.
+savont export -i /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/unite-10.0/. -o /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export
+
+#Plot with QIIME
+ASV_dir=/data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export
+
+printf '%s\n' \
+$'#SampleID\treal_sample_name\ttreatment' \
+$'barcode01.trim\tSHBB01881-1\tControl' \
+$'barcode02.trim\tSHBB01881-2\tControl' \
+$'barcode03.trim\tSHBB01881-3\tControl' \
+$'barcode04.trim\tSHBB01882-1\tInsecticide' \
+$'barcode05.trim\tSHBB01882-2\tInsecticide' \
+$'barcode06.trim\tSHBB01882-4\tInsecticide' \
+$'barcode07.trim\tSHBB01884-3\tControl' \
+$'barcode08.trim\tSHBB01887-2\tControl' \
+$'barcode09.trim\tSHBB01888-1\tMicrosap' \
+$'barcode10.trim\tSHBB01888-3\tMicrosap' \
+$'barcode11.trim\tSHBB01888-4\tMicrosap' \
+$'barcode12.trim\tSHBB01889-1\tMicrosap' \
+$'barcode13.trim\tSHBB01890-1\tControl' \
+$'barcode14.trim\tSHBB01891-1\tMicrosap' \
+$'barcode15.trim\tSHBB01895-1\tControl' \
+$'barcode16.trim\tSHBB01898-1\tInsecticide' \
+$'barcode17.trim\tSHBB01899-1\tInsecticide' \
+$'barcode18.trim\tSHBB01900-1\tControl' \
+$'barcode19.trim\tSHBB01903-1\tMicrosap' \
+$'barcode20.trim\tSHBB01909-1\tMicrosap' \
+$'barcode21.trim\tSHBB01910-1\tInsecticide' \
+$'barcode22.trim\tSHBB01911-1\tMicrosap' \
+$'barcode23.trim\tSHBB01914-1\tInsecticide' \
+$'barcode24.trim\tSHBB01915-1\tInsecticide' \
+> "$ASV_dir"/sample-metadata.tsv
+
+# Feature table
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+biom convert -i /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/merged_feature_table.tsv -o /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/feature-table.biom --table-type='OTU table' --to-hdf5
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime tools import --type 'FeatureTable[Frequency]' --input-path /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/feature-table.biom --output-path /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/feature-table.qza
+
+# Representative sequences
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime tools import --type 'FeatureData[Sequence]' \
+--input-path /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/merged_rep_seqs.fasta --output-path /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/rep-seqs.qza
+
+# If `savont classify / sintax` was run: ASV-level taxonomy (use with feature-table.qza for taxa barplot)
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime tools import --type 'FeatureData[Taxonomy]' --input-format HeaderlessTSVTaxonomyFormat \
+--input-path /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/merged_asv_taxonomy.tsv --output-path /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/taxonomy.qza
+
+# If `savont classify / sintax` was run: Taxonomy bar plot
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
+qiime taxa barplot --i-table /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/feature-table.qza --i-taxonomy /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/taxonomy.qza  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
+--o-visualization /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/taxa-bar-plots.qzv
+```
+
+![Relative abundance plots for ITS seqeunces](figures/Screenshot_2026-10-06_134822.png)
+
+Download to plot with R:
+```bash
+down_dir=/data/users/theaven/download_20261006
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/feature-table.qza \
+  --output-path "$ASV_dir"/exported-feature-table_its
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif biom convert \
+  -i "$ASV_dir"/exported-feature-table_its/feature-table.biom \
+  -o "$down_dir"/feature-table_its.tsv \
+  --to-tsv
+
+apptainer exec --bind /data ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime tools export \
+  --input-path "$ASV_dir"/taxonomy.qza \
+  --output-path "$down_dir"/exported-taxonomy_its
+
+cp "$ASV_dir"/sample-metadata.tsv "$down_dir"/.
+```
+Relative abundance:
+```R
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+# Load table
+otu <- read.table("download_20261006/feature-table_its.tsv", header=TRUE, row.names=1, sep="\t", comment.char="")
+otu <- as.matrix(otu)
+colnames(otu) <- gsub("\\.", "-", colnames(otu))
+
+# Load metadata
+meta <- read_tsv(
+  "download_20261006/sample-metadata.tsv",
+  comment = "",  
+  show_col_types = FALSE
+)
+meta <- column_to_rownames(meta, var = "#SampleID")
+rownames(meta) <- gsub("\\.", "-", rownames(meta))
+
+tax1 <- read.table("download_20261006/exported-taxonomy_its/taxonomy.tsv", 
+                  header = TRUE, 
+                  sep = "\t", 
+                  row.names = 1)
+tax_split <- tax1 %>%
+  separate(Taxon, 
+           into = c("Kingdom","Phylum","Class","Order","Family","Genus","Species"), 
+           sep = ";", 
+           fill = "right")
+
+# Create objects
+OTU <- otu_table(otu, taxa_are_rows=TRUE)
+SAM <- sample_data(meta)
+TAX <- tax_table(as.matrix(tax_split))
+ps <- phyloseq(OTU, SAM, TAX)
+
+tax_table(ps) <- apply(tax_table(ps), 2, trimws)
+tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
+
+ps_genus <- tax_glom(ps, taxrank = "Genus")
+
+ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+
+df <- psmelt(ps_rel)
+
+taxa_abund <- tapply(df$Abundance, df$Genus, sum)
+
+top <- names(sort(taxa_abund, decreasing = TRUE))[1:13]
+
+df$Genus <- as.character(df$Genus)
+df$Genus[!df$Genus %in% top] <- "Other"
+
+df$Genus <- factor(df$Genus, levels = c(top, "Other"))
+
+#auto_cols <- setNames(c(
+#  "darkblue", "deeppink4", "orange","#00ffff", "sienna3", "wheat3","#ccffaa" ,"#00ffcc" ,"yellow", "#6ea02c", "#008000", "red3", "#ff00ec"
+#), top[1:length(top)])
+#final_cols <- c(auto_cols, "Other" = "grey80")
+
+final_cols <- c(
+  "Wickerhamomyces" = "darkblue",
+  "Unclassified_Eukaryota" = "darkgrey",
+  "Kuraishia" = "orange",
+  "Ogataea" = "deeppink4",
+  "Unclassified_Laelapidae" = "#00ffff",
+  "Peterozyma" = "wheat3",
+  "Nakazawaea" = "sienna3",
+  "Unclassified_Hydnaceae" = "#ccffaa",
+  "Unclassified_Pichiaceae" = "darkred",
+  "Unclassified_Nectriaceae" = "red3",
+  "Endoconidiophora" = "yellow",
+  "Ambrosiozyma" = "#008000",
+  "Phlebiopsis" = "skyblue3",
+  "Other" = "grey80"
+)
+
+df_sub <- subset(df, treatment != "blank")
+
+df_sub$treatment <- as.character(df_sub$treatment)
+
+df_sub$Group <- paste(df_sub$treatment, df_sub$real_sample_name, sep = " ")
+df_sub$Label <- paste(df_sub$treatment, df_sub$real_sample_name)
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+df_sub <- df_sub[order(df_sub$treatment, df_sub$real_sample_name), ]
+
+df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
+
+ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = final_cols) +
+  scale_x_discrete(drop = FALSE) +
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  )
+```
+![R Relative abundance plots for ITS seqeunces](figures/savont-its-3.png)
+
+Alpha diversity:
+```R
+meta_f <- meta[ !is.na(meta$treatment) & meta$treatment != "blank",  ,  drop = FALSE]
+
+ps_f <- prune_samples(rownames(meta_f), ps)
+meta_f <- meta_f[sample_names(ps_f), ,drop = FALSE]
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- estimate_richness(
+  ps_f,
+  measures = c(
+    "Shannon",
+    "Simpson",
+    "Chao1",
+    "Observed"
+  )
+)
+
+alpha_df$sample_id <- rownames(alpha_df)
+alpha_df$real_sample_name <- meta_f$real_sample_name
+alpha_df$treatment <- meta_f$treatment
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c(
+    "Control",
+    "Insecticide",
+    "Microsap"
+  )
+)
+
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment), width = 0.15, alpha = 0.7, size = 2) +
+  scale_fill_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  scale_color_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  labs(x = "Treatment", y = "Shannon diversity") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.2067 - normal
+#Insecticide - p-value = 0.3324 - normal
+#Microsap - p-value = 0.1499 - normal
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.8   -          
+#Microsap    0.8   0.8  
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  0.151  0.0757   0.217  0.807
+#Residuals   21  7.337  0.3494   
+#No statistically significant evidence that mean Shannon diversity differs among the three treatments.
+```
+![R alpha diversity plots for ITS seqeunces](figures/savont-its-shannon.png)
+
+beta diversity:
+
+```R
+library(vegan)
+
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = real_sample_name),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq  Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.05154 0.025772 1.5243    999  0.234
+#Residuals 21 0.35505 0.016907 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)  
+#Model     2   1.0285 0.12325 1.4761   0.04 *
+#Residual 21   7.3157 0.87675                
+#Total    23   8.3442 1.00000    
+#PERMANOVA indicates that treatment has a statistically significant effect on community composition, treatment explains only ~12.3% of variation in community composition   
+
+pairwise_permanova <- function(dist_matrix, metadata, group_col) {
+  groups <- unique(metadata[[group_col]])
+  pairs <- combn(groups, 2, simplify = FALSE)
+  results <- lapply(pairs, function(pair) {
+    keep <- metadata[[group_col]] %in% pair
+    dist_sub <- as.dist(as.matrix(dist_matrix)[keep, keep])
+    meta_sub <- metadata[keep, , drop = FALSE]
+    formula <- as.formula(paste("dist_sub ~", group_col))
+    result <- adonis2(
+      formula,
+      data = meta_sub,
+      permutations = 999
+    )
+    data.frame(
+      Group1 = pair[1],
+      Group2 = pair[2],
+      F = result$F[1],
+      R2 = result$R2[1],
+      p = result$`Pr(>F)`[1]
+    )
+  })
+  results <- do.call(rbind, results)
+  results$p_adj <- p.adjust(results$p, method = "BH")
+  results
+}  
+
+pairwise_results <- pairwise_permanova(
+  bray,
+  meta_f,
+  "treatment"
+)
+
+pairwise_results
+#       Group1      Group2         F         R2     p  p_adj
+#1     Control Insecticide 1.7702678 0.11225350 0.026 0.0555
+#2     Control    Microsap 0.8356151 0.05632494 0.674 0.6740
+#3 Insecticide    Microsap 1.9096013 0.12002823 0.037 0.0555
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.00155 0.0007752 0.1417    999  0.853
+#Residuals 21 0.11491 0.0054718 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.4142 0.07835 0.8926  0.647
+#Residual 21   4.8722 0.92165              
+#Total    23   5.2864 1.00000  
+#No significant difference in community composition between treatments, treatment explains ~7.8% of variation     
+```
+Treatment has a statistically significant effect on community composition, explaining approximately 12.3% of the variation (bray-curtis). The insecticide treated appear different; however, none of the pairwise comparisons remain significant after BH correction at 0.05. The insecticide treatment is not really relevant to our ivestigation of the microsap treatments, it is unclear why it would have an effect on fungi.
+
+There are no significant differences in the presence/abscence of individual taxa.
+
+![R beta diversity plots for 16S seqeunces](figures/savont-its-bray.png)
+
+Presence/abscence + adundance - heatmap:
+```R
+library(pheatmap)
+
+tax_tab <- as.data.frame(tax_table(ps_f_genus))
+
+tax_names <- tax_tab$Genus
+tax_names[is.na(tax_names) | tax_names == ""] <- "Unknown"
+tax_names <- make.unique(tax_names)
+
+mat_asv <- mat
+colnames(mat_asv) <- tax_names
+
+mat_genus_rel <- sweep(mat_asv, 1, rowSums(mat_asv), "/")
+mat_genus_rel_log <- log10(mat_genus_rel + 1e-6)
+
+#Order samples
+meta_mat <- meta[rownames(mat_genus_rel_log), , drop = FALSE ]
+
+ord <- order(meta_mat$treatment)
+
+mat_ordered <- mat_genus_rel_log[ord, ]
+meta_ordered <- meta_mat[ord, , drop = FALSE  ]
+
+# --- Define colors: 0 = white, then blue → red ---
+# Avoid including 0 in gradient
+nonzero_vals <- mat_ordered[mat_ordered > 0]
+
+# --- Row annotations ---
+annotation_row <- data.frame(
+  Treatment = meta_ordered$treatment
+)
+
+rownames(annotation_row) <- rownames(mat_ordered)
+
+#Optional: gaps
+gaps <- cumsum(table(meta_ordered$treatment))
+
+pheatmap(
+  mat_ordered,
+  color = colorRampPalette(c("white", "blue", "red"))(100),
+  breaks = seq(
+    min(mat_ordered, na.rm = TRUE),
+    max(mat_ordered, na.rm = TRUE),
+    length.out = 101
+  ),
+  cluster_rows = FALSE,
+  cluster_cols = TRUE,
+  annotation_row = annotation_row,
+  gaps_row = gaps,
+  border_color = "grey90",
+  fontsize_col = 7,
+  labels_row = meta_ordered$real_sample_name
+)
+```
+![R heatmap presence/abscence plots for 16S seqeunces](figures/savont-its-heat.png)
+
+#### IDTAXA Classification <a name="48"></a>
+
+Databases are not setup for full length sequences.
+
+**16S**
+
+```R
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(c("DECIPHER","stringr", "Biostrings"))
+
+library(DECIPHER)
+library(Biostrings)
+library(stringr)
+
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+
+load("SILVA_SSU_r138_2_2024.RData")
+
+SSU_trainingSet <- trainingSet
+
+SSU_ASVs <- readDNAStringSet("download_20261002/16s_final_asvs.fasta")
+
+SSU_tax_idtaxa <- IdTaxa(
+  SSU_ASVs,
+  SSU_trainingSet,
+  strand = "both",
+  bootstraps = 100 , #default - maximum number of bootstrap replicates to perform for each sequence
+  processors = NULL, #Use all available cores
+  threshold = 60 ,  #% of bootstraps supporting assignment, raise to 70–80 for fewer false positives
+  verbose = TRUE 
+)
+
+# Convert to table
+target_ranks <- c("root","domain","phylum","class","order","family","genus","species")
+
+extract_tax <- function(x) {
+  out <- setNames(rep(NA_character_, length(target_ranks)), target_ranks)
+  if (!is.null(x$rank) && length(x$rank)) {
+    idx <- match(tolower(x$rank), target_ranks)
+    keep <- !is.na(idx)
+    out[idx[keep]] <- x$taxon[keep]
+  }
+  out
+}
+
+SSU_tax_tab <- t(vapply(SSU_tax_idtaxa, extract_tax,
+                    FUN.VALUE = setNames(rep(NA_character_, length(target_ranks)), target_ranks)))
+SSU_tax_tab <- as.data.frame(SSU_tax_tab, stringsAsFactors = FALSE)
+rownames(SSU_tax_tab) <- names(SSU_ASVs)
+write.table(SSU_tax_tab, file = "download_20261002/SSU_tax_tab_corrected_16s.tsv", sep = "\t", row.names = TRUE, quote = FALSE, na = "NA")
+
+#convert to qiime format for plotting
+tax_df <- data.frame(
+  Feature.ID = names(SSU_tax_idtaxa),
+  Taxon = sapply(SSU_tax_idtaxa, function(x) {
+    # Skip the first rank (root)
+    ranks <- c("k__", "p__", "c__", "o__", "f__", "g__", "s__")
+    paste0(ranks, x$taxon[-1])[1:length(ranks)] |> paste(collapse = "; ")
+  }),
+  Confidence = sapply(SSU_tax_idtaxa, function(x) {
+    min(x$confidence, na.rm = TRUE) / 100
+  })
+)
+
+write.table(
+  tax_df,
+  "download_20261002/idtaxa_taxonomy_16s.tsv",
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
+```
+**ITS**
+
+```R
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(c("DECIPHER","stringr", "Biostrings"))
+
+library(DECIPHER)
+library(Biostrings)
+library(stringr)
+
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+
+load("UNITE_v2025.RData")
+
+ITS_trainingSet <- trainingSet
+
+ITS_ASVs <- readDNAStringSet("download_20261002/its_final_asvs.fasta")
+
+ITS_tax_idtaxa <- IdTaxa(
+  ITS_ASVs,
+  ITS_trainingSet,
+  strand = "both",
+  bootstraps = 100 , #default - maximum number of bootstrap replicates to perform for each sequence
+  processors = NULL, #Use all available cores
+  threshold = 60 ,  #% of bootstraps supporting assignment, raise to 70–80 for fewer false positives
+  verbose = TRUE 
+)
+
+ITS_tax_tab <- t(vapply(ITS_tax_idtaxa, extract_tax,
+                    FUN.VALUE = setNames(rep(NA_character_, length(target_ranks)), target_ranks)))
+ITS_tax_tab <- as.data.frame(ITS_tax_tab, stringsAsFactors = FALSE)
+rownames(ITS_tax_tab) <- names(ITS_ASVs)
+write.table(ITS_tax_tab, file = "download_20261002/ITS_tax_tab_corrected_its.tsv", sep = "\t", row.names = TRUE, quote = FALSE, na = "NA")
+
+#convert to qiime format for plotting
+tax_df2 <- data.frame(
+  Feature.ID = names(ITS_tax_idtaxa),
+  Taxon = sapply(ITS_tax_idtaxa, function(x) {
+    # Skip the first rank (root)
+    ranks <- c("k__", "p__", "c__", "o__", "f__", "g__", "s__")
+    paste0(ranks, x$taxon[-1])[1:length(ranks)] |> paste(collapse = "; ")
+  }),
+  Confidence = sapply(ITS_tax_idtaxa, function(x) {
+    min(x$confidence, na.rm = TRUE) / 100
+  })
+)
+
+write.table(
+  tax_df2,
+  "download_20261002/idtaxa_taxonomy_its.tsv",
+  sep = "\t",
+  quote = FALSE,
+  row.names = FALSE
+)
+```
+
+Far more unclassified ASVs with IDTAXA than with the savont bundled classifications.
+
+### Other/Working <a name="45"></a>
+
+Nanoclust
+medaka/racon
+```bash
+#edit nextflow.config to contain conda.enabled = true
+
+module load anaconda3
+module load openjdk/17.0.11_9-none-none-2c62zhf
+rm /home/clusterusers/theaven/tools/NanoCLUST/results/pipeline_info/execution_trace.txt
+/home/clusterusers/theaven/tools/NanoCLUST/nextflow.1 run main.nf -profile test,conda
+```
+https://bugseq.com/free.
+
+nanoASV
+RAMBO
+CONCOMPRA
+
+- only takes one primer pair at once... this seems stupid design as the nanopore amplicon kit contains a primer mix and this will therefore be the situation for the vast majority of potential users.
+
+primer-chop does not support degenerate bases
+```bash
+
+screen -S concompra
+srun -p bioagri  -c 8 --mem 32G --pty bash
+module load apptainer/1.4.1-gcc-13.3.0-3  
+apptainer pull concompra.sif docker://willemstock/concompra:version0.0.2
+mkdir /data/users/theaven/Ips_jam_project/concompra/ITS
+cd /data/users/theaven/Ips_jam_project/concompra/ITS
+
+#symlinked files not sufficient
+cp /data/users/theaven/Ips_jam_project/raw_data/minion/ITS/basecalls/*.fastq /data/users/theaven/Ips_jam_project/concompra/ITS/.
+
+echo TEMPLATE_DIR="/opt/CONCOMPRA/scripts" > /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
+echo PRIMER_SET="/data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa" >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
+echo MIN=300 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
+echo MAX=1500 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
+echo MERGE_CONSENSUS=0.97 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
+echo READS_CONSENSUS=120 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
+echo THREADS=8 >> /data/users/theaven/Ips_jam_project/concompra/ITS/directory_list.txt
+
+echo ">head" > /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
+echo TCCGTAGGTGAACCTGCGG >> /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
+echo ">tail" >> /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
+echo GCATATCAATAAGCGGAGGA >> /data/users/theaven/Ips_jam_project/concompra/ITS/primer_set.fa
+
+#run the image, pointing to a local directory with has the (compressed) fastq files, the directory_list.txt (adjust the parameters but not the directories in this file) and the primer_set.fa (with the appropriate primer+anchor sequences) files
+apptainer run --bind /data/users/theaven/Ips_jam_project/concompra/ITS:/data --bind /home/clusterusers/theaven:/home/clusterusers/theaven ~/git_repos/Containers/concompra.sif 
+```
+```bash
+apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif qiime phylogeny
+
+#demoising step:
+qiime dada2 denoise-paired \
+  --i-demultiplexed-seqs demux.qza \
+  --o-table table.qza \
+  --o-representative-sequences rep-seqs.qza \
+  --o-denoising-stats stats.qza
+
+#phylogeny estimation
+  qiime phylogeny align-to-tree-mafft-iqtree \
+  --i-sequences rep-seqs.qza \
+  --o-alignment aligned-rep-seqs.qza \
+  --o-masked-alignment masked-aligned-rep-seqs.qza \
+  --o-tree unrooted-tree.qza \
+  --o-rooted-tree rooted-tree.qza
+
+qiime diversity core-metrics-phylogenetic \
+  --i-table table.qza \
+  --i-phylogeny tree.qza \
+  --p-sampling-depth 1000 \
+  --m-metadata-file metadata.tsv \
+  --output-dir core-metrics
+
+qiime diversity beta-phylogenetic \
+  --i-table table.qza \
+  --i-phylogeny tree.qza \
+  --p-metric weighted_unifrac
+```
 
 ## Illumina - short reads - 1st round <a name="32"></a>
 
@@ -5417,6 +6554,8 @@ No significant taxa - hard with only 8 reps
 
 Presence/abscence + adundance - heatmap:
 ```R
+library(pheatmap)
+
 tax_tab <- as.data.frame(tax_table(ps_f_genus))
 
 tax_names <- tax_tab$Genus
