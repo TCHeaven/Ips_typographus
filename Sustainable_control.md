@@ -1909,6 +1909,11 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = final_cols) +
   scale_x_discrete(drop = FALSE) +
+  labs(
+    title = "ONT - EMU - Genus-level relative abundance 16S",
+    x = NULL,
+    y = "Relative abundance"
+  ) +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
@@ -2399,6 +2404,11 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = final_cols) +
   scale_x_discrete(drop = FALSE) +
+  labs(
+    title = "ONT - EMU - Genus-level relative abundance ITS",
+    x = NULL,
+    y = "Relative abundance"
+  ) +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
@@ -3879,7 +3889,7 @@ df$Genus <- factor(df$Genus, levels = c(top, "Other"))
   "Erwinia" = "#008000",
   "Pseudoxanthomonas" = "wheat3",
   "Spiroplasma" = "darkblue",
-  "Stenotrophomonas" = "deeppink4",
+  "Stenotrophomonas" = "sienna3",
   "Wolbachia" = "deeppink4",
   "Chryseobacterium" = "#ff00ec",
   "Rahnella" = "#000000",
@@ -3909,6 +3919,11 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = final_cols) +
   scale_x_discrete(drop = FALSE) +
+  labs(
+    title = "ONT - savont - Genus-level relative abundance 16S",
+    x = NULL,
+    y = "Relative abundance"
+  ) +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
@@ -4171,6 +4186,189 @@ pheatmap(
 ```
 ![R heatmap presence/abscence plots for 16S seqeunces](figures/savont-16s-heat.png)
 
+For comparison with EMU - where many reads must be collapsed to genus calls - collapse ASVs to genera before calculating alpha and beta diversity.
+
+Alpha diversity:
+```R
+meta_f <- meta[ !is.na(meta$treatment) & meta$treatment != "blank",  ,  drop = FALSE]
+
+ps_f <- prune_samples(rownames(meta_f), ps_genus)
+meta_f <- meta_f[sample_names(ps_f), ,drop = FALSE]
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- estimate_richness(
+  ps_f,
+  measures = c(
+    "Shannon",
+    "Simpson",
+    "Chao1",
+    "Observed"
+  )
+)
+
+alpha_df$sample_id <- rownames(alpha_df)
+alpha_df$real_sample_name <- meta_f$real_sample_name
+alpha_df$treatment <- meta_f$treatment
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c(
+    "Control",
+    "Insecticide",
+    "Microsap"
+  )
+)
+
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment), width = 0.15, alpha = 0.7, size = 2) +
+  scale_fill_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  scale_color_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  labs(x = "Treatment", y = "Shannon diversity") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.7296 - normal
+#Insecticide - p-value = 0.9108 - normal
+#Microsap - p-value = 0.1497 - normal
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.57   -          
+#Microsap    0.96   0.57  
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  0.838  0.4192   0.761  0.479
+#Residuals   21 11.562  0.5506     
+#No statistically significant evidence that mean Shannon diversity differs among the three treatments.
+```
+![R alpha diversity plots for 16S seqeunces](figures/savont-16s-shannon2.png)
+
+beta diversity:
+
+```R
+library(vegan)
+
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = real_sample_name),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.00348 0.0017383 0.089    999  0.927
+#Residuals 21 0.41032 0.0195391  
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.5249 0.06412 0.7194  0.816
+#Residual 21   7.6607 0.93588              
+#Total    23   8.1856 1.00000   
+#No significant difference in community composition between treatments, treatment explains only ~6.4% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.008616 0.0043081 0.3452    999   0.71
+#Residuals 21 0.262094 0.0124807 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.4053 0.08171 0.9343  0.569
+#Residual 21   4.5557 0.91829              
+#Total    23   4.9610 1.00000 0  
+#No significant difference in community composition between treatments, treatment explains ~8.2% of variation     
+```
+There were no differences in community composition between treatments. There are no significant differences in the presence/abscence of individual taxa either.
+
+![R beta diversity plots for 16S seqeunces](figures/savont-16s-bray2.png)
+
 #### Savont ASV generation - ITS <a name="50"></a>
 
 ```bash
@@ -4382,6 +4580,11 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = final_cols) +
   scale_x_discrete(drop = FALSE) +
+  labs(
+    title = "ONT - savont - Genus-level relative abundance ITS",
+    x = NULL,
+    y = "Relative abundance"
+  ) +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
@@ -4682,6 +4885,193 @@ pheatmap(
 )
 ```
 ![R heatmap presence/abscence plots for ITS seqeunces](figures/savont-its-heat.png)
+
+For comparison with EMU - where many reads must be collapsed to genus calls - collapse ASVs to genera before calculating alpha and beta diversity.
+
+Alpha diversity:
+```R
+meta_f <- meta[ !is.na(meta$treatment) & meta$treatment != "blank",  ,  drop = FALSE]
+
+ps_f <- prune_samples(rownames(meta_f), ps_genus)
+meta_f <- meta_f[sample_names(ps_f), ,drop = FALSE]
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- estimate_richness(
+  ps_f,
+  measures = c(
+    "Shannon",
+    "Simpson",
+    "Chao1",
+    "Observed"
+  )
+)
+
+alpha_df$sample_id <- rownames(alpha_df)
+alpha_df$real_sample_name <- meta_f$real_sample_name
+alpha_df$treatment <- meta_f$treatment
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c(
+    "Control",
+    "Insecticide",
+    "Microsap"
+  )
+)
+
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment), width = 0.15, alpha = 0.7, size = 2) +
+  scale_fill_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  scale_color_manual(values = c("Control" = "royalblue", "Insecticide" = "#CC6666", "Microsap" = "#66CC66")) +
+  labs(x = "Treatment", y = "Shannon diversity") +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.01434 - normal
+#Insecticide - p-value = 0.6507 - normal
+#Microsap - p-value = 0.6495 - normal
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.49   -          
+#Microsap    0.48   0.80  
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  0.798  0.3988   0.955  0.401
+#Residuals   21  8.771  0.4177  
+
+kruskal.test(Shannon ~ treatment, data = alpha_df)
+#Kruskal-Wallis chi-squared = 2.165, df = 2, p-value = 0.3387
+
+#No statistically significant evidence that mean Shannon diversity differs among the three treatments.
+```
+![R alpha diversity plots for ITS seqeunces](figures/savont-its-shannon2.png)
+
+beta diversity:
+
+```R
+library(vegan)
+
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = real_sample_name),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq  Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.05899 0.029493 1.4576    999  0.251
+#Residuals 21 0.42491 0.020234 
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)  
+#Model     2   0.9130 0.11054 1.3049   0.12
+#Residual 21   7.3459 0.88946              
+#Total    23   8.2589 1.00000     
+#No statistically significant effect on community composition, treatment explains only ~11.1% of variation in community composition   
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.004739 0.0023693 0.4816    999   0.59
+#Residuals 21 0.103317 0.0049199   
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.3796 0.07248 0.8205  0.799
+#Residual 21   4.8570 0.92752              
+#Total    23   5.2366 1.00000 
+#No significant difference in community composition between treatments, treatment explains ~7.2% of variation     
+```
+No differences
+
+![R beta diversity plots for ITS seqeunces](figures/savont-its-bray2.png)
 
 #### IDTAXA Classification <a name="48"></a>
 
@@ -5855,7 +6245,7 @@ df$Genus[!df$Genus %in% keep_taxa] <- "Other"
   "g__Spiroplasma" = "darkblue",
   "g__unclassified_Enterobacterales_2" = "#008000",
   "g__unclassified_Yersiniaceae_2" = "skyblue3",
-  "g__Stenotrophomonas_2" = "deeppink4",
+  "g__Stenotrophomonas_2" = "sienna3",
   "g__Chryseobacterium" = "#ff00ec",
   "g__unclassified_Morganellaceae_5" = "cyan",
   "g__Wolbachia_2" = "deeppink4",
@@ -5887,6 +6277,11 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
     geom_bar(stat = "identity") +
     scale_fill_manual(values = final_cols) +
     scale_x_discrete(drop = FALSE) +
+  labs(
+    title = "Illumina - IDTAXA - Genus-level relative abundance 16s",
+    x = NULL,
+    y = "Relative abundance"
+  ) +
     theme(
       axis.text.x = element_text(angle = 90, hjust = 1)
     )
@@ -6282,6 +6677,203 @@ pheatmap(
 ```
 ![R heatmap presence/abscence plots for 16S seqeunces](figures/dada-16s-heat.png)
 
+For comparison with EMU - where many reads must be collapsed to genus calls - collapse ASVs to genera before calculating alpha and beta diversity.
+
+Alpha diversity:
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson", "Chao1", "Observed"))
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta[meta$treatment != "blank", , drop = FALSE]  
+ps_f <- prune_samples(rownames(meta_f), ps_genus)
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  scale_fill_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.5744 - normal
+#Insecticide - p-value = 0.7371 - normal
+#Microsap - p-value = 0.02621 - not normal
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.29    -          
+#Microsap    0.96    0.29    
+```
+![R alpha diversity plots for 16S seqeunces](figures/dada-16s-shannon2.png)
+
+beta diversity:
+
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq  Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.01573 0.007866 0.2628    999  0.768
+#Residuals 21 0.62857 0.029932   
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)
+#Model     2   0.5795 0.07539 0.8562  0.631
+#Residual 21   7.1070 0.92461              
+#Total    23   7.6865 1.00000     
+#No significant difference in community composition between treatments, treatment explains only ~7.5% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.014920 0.0074600 1.9875    999  0.172
+#Residuals 21 0.078823 0.0037535
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)   
+#Model     2   0.7533 0.11488 1.3628  0.034 *
+#Residual 21   5.8041 0.88512                
+#Total    23   6.5575 1.00000  
+#Significant difference in community composition between treatments, treatment explains ~11.5% of variation  
+
+pairwise_permanova <- function(dist_matrix, metadata, group_col) {
+  groups <- unique(metadata[[group_col]])
+  pairs <- combn(groups, 2, simplify = FALSE)
+  results <- lapply(pairs, function(pair) {
+    keep <- metadata[[group_col]] %in% pair
+    dist_sub <- as.dist(as.matrix(dist_matrix)[keep, keep])
+    meta_sub <- metadata[keep, , drop = FALSE]
+    formula <- as.formula(paste("dist_sub ~", group_col))
+    result <- adonis2(
+      formula,
+      data = meta_sub,
+      permutations = 999
+    )
+    data.frame(
+      Group1 = pair[1],
+      Group2 = pair[2],
+      F = result$F[1],
+      R2 = result$R2[1],
+      p = result$`Pr(>F)`[1]
+    )
+  })
+  results <- do.call(rbind, results)
+  results$p_adj <- p.adjust(results$p, method = "BH")
+  results
+}  
+
+pairwise_results <- pairwise_permanova(
+  jaccard,
+  meta_f,
+  "treatment"
+)
+
+pairwise_results 
+#       Group1      Group2        F         R2     p p_adj
+#1     Control Insecticide 1.556669 0.10006439 0.031 0.093
+#2     Control    Microsap 1.236401 0.08114786 0.135 0.135
+#3 Insecticide    Microsap 1.299964 0.08496515 0.068 0.1022
+```
+No differences following mulitple test correction
+
+![R beta diversity plots for 16S seqeunces](figures/dada-16s-bray2.png)
+
 ### ITS <a name="44"></a>
 
 ```bash
@@ -6408,6 +7000,11 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
   geom_bar(stat = "identity") +
   scale_fill_manual(values = final_cols) +
   scale_x_discrete(drop = FALSE) +
+  labs(
+    title = "Illumina - IDTAXA - Genus-level relative abundance ITS",
+    x = NULL,
+    y = "Relative abundance"
+  ) +
   theme(
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
@@ -6747,3 +7344,210 @@ pheatmap(
 )
 ```
 ![R heatmap presence/abscence plots for ITS seqeunces](figures/dada-its-heat.png)
+
+For comparison with EMU - where many reads must be collapsed to genus calls - collapse ASVs to genera before calculating alpha and beta diversity.
+
+Alpha diversity:
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson", "Chao1", "Observed"))
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta[meta$treatment != "blank", , drop = FALSE]  
+ps_f <- prune_samples(rownames(meta_f), ps_genus)
+identical(sample_names(ps_f), rownames(meta_f))
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = treatment),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  scale_fill_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#######
+
+by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
+#Control - p-value = 0.9996 - normal
+#Insecticide - p-value = 0.551 - normal
+#Microsap - p-value = 0.09525 - normal
+
+pairwise.t.test(alpha_df$Shannon,
+                alpha_df$treatment,
+                p.adjust.method = "BH",
+                pool.sd = FALSE)
+#            Control Insecticide
+#Insecticide 0.49    -          
+#Microsap    0.42    0.49
+
+pairwise.wilcox.test(alpha_df$Shannon,
+                     alpha_df$treatment,
+                     p.adjust.method = "BH")
+#No significant differences in Shannon diversity between any pair of treatments
+#            Control Insecticide
+#Insecticide 0.49    -          
+#Microsap    0.49    0.57 
+```
+![R alpha diversity plots for ITS seqeunces](figures/dada-its-shannon2.png)
+
+beta diversity:
+
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3,
+    max.overlaps = Inf,
+    force = 2
+  ) +
+  coord_cartesian(clip = "off") +
+  theme_classic() +
+  theme(plot.margin = margin(5.5, 40, 5.5, 5.5))
+
+#######
+
+betadisper_res <- betadisper(bray, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df  Sum Sq  Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.02240 0.011201 0.4115    999  0.662
+#Residuals 21 0.57168 0.027223   
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(bray ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)  
+#Model     2   0.7768 0.12477 1.4969  0.077 .
+#Residual 21   5.4490 0.87523                
+#Total    23   6.2259 1.00000    
+#No significant difference in community composition between treatments, treatment explains only ~12.5% of variation in community composition     
+
+#######
+
+ps_simple <- phyloseq::phyloseq(
+  phyloseq::otu_table(ps_f),
+  phyloseq::sample_data(ps_f)
+)
+ps_pa <- transform_sample_counts(ps_simple, function(x) as.numeric(x > 0))
+jaccard <- phyloseq::distance(ps_pa, method = "jaccard")
+ord <- ordinate(ps_f, method = "PCoA", distance = jaccard)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+
+  ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
+  geom_point(size = 3) +
+  scale_color_manual(values = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#######
+
+
+betadisper_res <- betadisper(jaccard, meta_f$treatment)
+permutest(betadisper_res, permutations = 999)
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.004634 0.0023170 0.3129    999  0.743
+#Residuals 21 0.155508 0.0074051  
+#No evidence of differences in dispersion - no difference in within-group variability
+boxplot(betadisper_res)
+adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
+#         Df SumOfSqs      R2      F Pr(>F)  
+#Model     2   0.4655 0.12239 1.4642  0.041 *
+#Residual 21   3.3380 0.87761                
+#Total    23   3.8035 1.00000 
+#Significant difference in community composition between treatments, treatment explains ~12.2% of variation  
+
+pairwise_permanova <- function(dist_matrix, metadata, group_col) {
+  groups <- unique(metadata[[group_col]])
+  pairs <- combn(groups, 2, simplify = FALSE)
+  results <- lapply(pairs, function(pair) {
+    keep <- metadata[[group_col]] %in% pair
+    dist_sub <- as.dist(as.matrix(dist_matrix)[keep, keep])
+    meta_sub <- metadata[keep, , drop = FALSE]
+    formula <- as.formula(paste("dist_sub ~", group_col))
+    result <- adonis2(
+      formula,
+      data = meta_sub,
+      permutations = 999
+    )
+    data.frame(
+      Group1 = pair[1],
+      Group2 = pair[2],
+      F = result$F[1],
+      R2 = result$R2[1],
+      p = result$`Pr(>F)`[1]
+    )
+  })
+  results <- do.call(rbind, results)
+  results$p_adj <- p.adjust(results$p, method = "BH")
+  results
+}  
+
+pairwise_results <- pairwise_permanova(
+  jaccard,
+  meta_f,
+  "treatment"
+)
+
+pairwise_results 
+#       Group1      Group2        F         R2     p p_adj
+#1     Control Insecticide 1.681484 0.10722735 0.034 0.102
+#2     Control    Microsap 1.281580 0.08386436 0.179 0.179
+#3 Insecticide    Microsap 1.445257 0.09357289 0.152 0.179  
+```
+No differences following mulitple test correction
+
+![R beta diversity plots for ITS seqeunces](figures/dada-its-bray2.png)
