@@ -22,7 +22,7 @@ All commands executed from /data/users/theaven/Ips_jam_project unless othewise s
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.3 [EMU - unfiltered](#14)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4 [EMU - filtered](#16)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.1 [EMU](#17)<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.1.1 [Plot](#19)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.1.1 [Plot](#19)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.2 [ITSx](#31)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.3 [Diversity analysis and plotting - 16S](#18)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.4.4 [Diversity analysis and plotting - ITS](#20)<br>
@@ -38,7 +38,10 @@ All commands executed from /data/users/theaven/Ips_jam_project unless othewise s
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.3 [MEGAN - LCA](#29)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.7.4 [Custom script - LCA](#30)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8 [Savont](#46)<br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.1 [Savont ASV generation](#47)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.1 [Savont ASV generation - 16S](#47)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.2 [Diversity analysis and plotting - 16S](#49)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.3 [Savont ASV generation - ITS](#50)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.4 [Diversity analysis and plotting - ITS](#51)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.8.2 [IDTAXA Classification](#48)<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.5.x [Other/Working](#45)<br>
 3. [Illumina - short reads - 1st round](#32)<br>
@@ -3605,7 +3608,7 @@ Results are still unhelpful.
 
 ### Savont <a name="46"></a>
 
-#### Savont ASV generation <a name="47"></a>
+#### Savont ASV generation - 16S <a name="47"></a>
 
 Savont generates Amplicon Sequence Variants (ASVs) at single-nucleotide resolution from long-read amplicon sequencing data such as ONT. Savont differs from mapping-based approaches (e.g. Emu or ONT's epi2me workflow). Savont instead follows the Reads -> ASV -> Classification paradigm (just like DADA2, but for noisier long reads).
 
@@ -3733,6 +3736,8 @@ apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
 qiime taxa barplot --i-table "$ASV_dir"/feature-table-no-organelle.qza --i-taxonomy "$ASV_dir"/taxonomy.qza --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
 --o-visualization "$ASV_dir"/taxa-bar-plots.qzv
 ```
+
+#### Diversity analysis and plotting - 16S <a name="49"></a>
 
 ![Relative abundance plots for 16S seqeunces](figures/Screenshot_2026-10-06_134844.png)
 
@@ -4134,7 +4139,7 @@ pheatmap(
 ```
 ![R heatmap presence/abscence plots for 16S seqeunces](figures/savont-16s-heat.png)
 
-***ITS***
+#### Savont ASV generation - ITS <a name="50"></a>
 
 ```bash
 #Calculate ASVs:
@@ -4231,6 +4236,7 @@ apptainer exec ~/git_repos/Containers/qiime2-amplicon-2025.7.sif \
 qiime taxa barplot --i-table /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/feature-table.qza --i-taxonomy /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/taxonomy.qza  --m-metadata-file "$ASV_dir"/sample-metadata.tsv \
 --o-visualization /data/users/theaven/Ips_jam_project/qc_data/minion/ITS/basecalls/CutAdapt/savont/export/taxa-bar-plots.qzv
 ```
+#### Diversity analysis and plotting - ITS <a name="51"></a>
 
 ![Relative abundance plots for ITS seqeunces](figures/Screenshot_2026-10-06_134822.png)
 
@@ -4643,7 +4649,7 @@ pheatmap(
   labels_row = meta_ordered$real_sample_name
 )
 ```
-![R heatmap presence/abscence plots for 16S seqeunces](figures/savont-its-heat.png)
+![R heatmap presence/abscence plots for ITS seqeunces](figures/savont-its-heat.png)
 
 #### IDTAXA Classification <a name="48"></a>
 
@@ -5741,31 +5747,19 @@ library(pheatmap)
 setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
 set.seed(1)
 
-# Load table
-otu <- read.table("down_20260609/feature-table_16sc.tsv", header=TRUE, row.names=1, sep="\t", comment.char="")
+otu <- read.table("down_20260609/feature-table_16sc.tsv", header = TRUE, row.names = 1, sep = "\t", comment.char = "")
 otu <- as.matrix(otu)
 colnames(otu) <- gsub("\\.", "-", colnames(otu))
 
-# Load metadata
-meta <- read_tsv(
-  "down_20260609/sample-metadata.tsv",
-  comment = "",  
-  show_col_types = FALSE
-)
+meta <- read_tsv("down_20260609/sample-metadata.tsv", comment = "", show_col_types = FALSE)
 meta <- column_to_rownames(meta, var = "#SampleID")
 
-tax1 <- read.table("down_20260609/exported-taxonomy_16s/taxonomy.tsv", 
-                  header = TRUE, 
-                  sep = "\t", 
-                  row.names = 1)
-tax_split <- tax1 %>%
-  separate(Taxon, 
-           into = c("Kingdom","Phylum","Class","Order","Family","Genus","Species"), 
-           sep = ";", 
-           fill = "right")
+tax1 <- read.table("down_20260609/exported-taxonomy_16s/taxonomy.tsv", header = TRUE, sep = "\t", row.names = 1, comment.char = "")
 
-# Create objects
-OTU <- otu_table(otu, taxa_are_rows=TRUE)
+tax_split <- tax1 %>% separate(Taxon, into = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"),
+    sep = ";", fill = "right")
+
+OTU <- otu_table(otu, taxa_are_rows = TRUE)
 SAM <- sample_data(meta)
 TAX <- tax_table(as.matrix(tax_split))
 ps <- phyloseq(OTU, SAM, TAX)
@@ -5773,60 +5767,100 @@ ps <- phyloseq(OTU, SAM, TAX)
 tax_table(ps) <- apply(tax_table(ps), 2, trimws)
 tax_table(ps)[, "Genus"] <- gsub("^s__", "g__", tax_table(ps)[, "Genus"])
 
+tax_mat <- as.matrix(tax_table(ps))
+
+#correct taxa Morganellaceae
+specific_asv <- (
+  tax_mat[, "Kingdom"] == "k__Bacteria" &
+  tax_mat[, "Phylum"] == "p__Pseudomonadota" &
+  tax_mat[, "Class"] == "c__Gammaproteobacteria_2" &
+  tax_mat[, "Order"] == "o__Enterobacterales_2" &
+  tax_mat[, "Family"] == "f__Morganellaceae_2" &
+  tax_mat[, "Genus"] == "g__endosymbionts_5" &
+  tax_mat[, "Species"] == "s__unclassified_endosymbionts_5"
+)
+
+tax_mat[specific_asv, "Genus"] <- "g__unclassified_Morganellaceae_5"
+tax_mat[specific_asv, "Species"] <- "s__unclassified_Morganellaceae_5"
+
+tax_table(ps) <- tax_table(tax_mat)
+
+#remove mitochondria and chloroplast asvs
+tax_mat <- as.matrix(tax_table(ps))
+
+remove_chloroplast <- (tax_mat[, "Genus"] == "g__unclassified_Chloroplast_2")
+remove_mitochondria <- apply(tax_mat, 1, function(x) {any(grepl("mitochond", x, ignore.case = TRUE))})
+remove_asv <- (remove_chloroplast | remove_mitochondria)
+asvs_to_remove <- rownames(tax_mat)[remove_asv]
+ps <- prune_taxa(setdiff(taxa_names(ps), asvs_to_remove), ps)
+cat("\nRemaining ASVs:", ntaxa(ps), "\n")
+
 ps_genus <- tax_glom(ps, taxrank = "Genus")
 
-ps_rel <- transform_sample_counts(ps_genus, function(x) x / sum(x))
+ps_rel <- transform_sample_counts(ps_genus, function(x) {if (sum(x) == 0) {return(x)}; x / sum(x)})
 
 df <- psmelt(ps_rel)
 
 taxa_abund <- tapply(df$Abundance, df$Genus, sum)
 
 top10 <- names(sort(taxa_abund, decreasing = TRUE))[1:10]
+cat("\nTop 10 genera:\n")
+print(top10)
 
-keep_taxa <- unique(c(top10))
+keep_taxa <- unique(top10)
 
 df$Genus <- as.character(df$Genus)
 
 df$Genus[!df$Genus %in% keep_taxa] <- "Other"
 
-all_taxa <- unique(df$Genus)
+#all_taxa <- unique(df$Genus)
+#auto_taxa <- setdiff(all_taxa, "Other")
+#colour_palette <- c("darkblue", "#008000", "sienna3", "orange", "deeppink4", "skyblue3", "red3", "maroon3", "wheat3", "yellow")
+#other_col <- c("Other" = "grey80")
+#final_cols <- c(auto_cols, other_col)
 
-auto_taxa <- setdiff(all_taxa, "Other")
-
-auto_cols <- setNames(c(
-  "darkblue",  "#008000", "sienna3", "orange",
-  "deeppink4",  "skyblue3", "red3"
-  , "maroon3", "wheat3", "yellow"
-), auto_taxa)
-
-other_col <- c("Other" = "grey80")
-
-final_cols <- c(auto_cols, other_col)
+  final_cols <- c(
+  "g__Spiroplasma" = "darkblue",
+  "g__unclassified_Enterobacterales_2" = "#008000",
+  "g__unclassified_Yersiniaceae_2" = "skyblue3",
+  "g__Stenotrophomonas_2" = "deeppink4",
+  "g__Chryseobacterium" = "#ff00ec",
+  "g__unclassified_Morganellaceae_5" = "cyan",
+  "g__Wolbachia_2" = "deeppink4",
+  "g__Pseudoxanthomonas_2" = "wheat3",
+  "g__unclassified_Root" = "orangered",
+  "g__Pseudomonas_2" = "#71c837",
+  "Other" = "grey80"
+)
 
 df$Genus <- factor(df$Genus, levels = names(final_cols))
 
-#remove sequencing blank from the plot
 df_sub <- subset(df, treatment != "blank")
 
-# create hierarchical grouping key
 df_sub$treatment <- as.character(df_sub$treatment)
+
 df_sub$Group <- paste(df_sub$treatment, df_sub$Sample, sep = " ")
+
 df_sub$Label <- paste(df_sub$treatment, df_sub$Sample)
 
 df_sub$Group <- factor(df_sub$Group, levels = unique(df_sub$Group))
+
 df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
 
-df_sub <- df_sub[order(df_sub$treatment, df_sub$Sample), ]
+df_sub <- df_sub[order(df_sub$treatment, df_sub$Sample),]
+
 df_sub$Label <- factor(df_sub$Label, levels = unique(df_sub$Label))
 
 ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
-  geom_bar(stat = "identity") +
-  scale_fill_manual(values = final_cols) +
-  scale_x_discrete(drop = FALSE) +
-  theme(
-    axis.text.x = element_text(angle = 90, hjust = 1)
-  )
+    geom_bar(stat = "identity") +
+    scale_fill_manual(values = final_cols) +
+    scale_x_discrete(drop = FALSE) +
+    theme(
+      axis.text.x = element_text(angle = 90, hjust = 1)
+    )
 ```
+![R Relative abundance plots for 16S seqeunces](figures/dada-16s-abundance.png)
+
 Alpha diversity:
 ```R
 get_alpha <- function(ps_obj, meta_obj) {
@@ -5886,6 +5920,8 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #Insecticide 0.075   -          
 #Microsap    0.382   0.075   
 ```
+![R alpha diversity plots for 16S seqeunces](figures/dada-16s-shannon.png)
+
 beta diversity:
 
 ```R
@@ -5935,16 +5971,16 @@ ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
 
 betadisper_res <- betadisper(bray, meta_f$treatment)
 permutest(betadisper_res, permutations = 999)
-#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
-#Groups     2 0.00600 0.0029997 0.1817    999  0.818
-#Residuals 21 0.34679 0.0165138
+#          Df  Sum Sq  Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.00518 0.002592 0.1436    999  0.853
+#Residuals 21 0.37909 0.018052 
 #No evidence of differences in dispersion - no difference in within-group variability
 boxplot(betadisper_res)
 adonis2(bray ~ treatment, data = meta_f, permutations = 999)
 #         Df SumOfSqs      R2      F Pr(>F)
-#Model     2   0.6544 0.07565 0.8593  0.675
-#Residual 21   7.9968 0.92435              
-#Total    23   8.6512 1.00000    
+#Model     2   0.7005 0.08085 0.9235  0.567
+#Residual 21   7.9647 0.91915              
+#Total    23   8.6653 1.00000     
 #No significant difference in community composition between treatments, treatment explains only ~7.6% of variation in community composition     
 
 #######
@@ -6001,19 +6037,59 @@ ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
 
 betadisper_res <- betadisper(jaccard, meta_f$treatment)
 permutest(betadisper_res, permutations = 999)
-#          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
-#Groups     2 0.005156 0.0025779 0.7559    999  0.476
-#Residuals 21 0.071622 0.0034106
+#          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.005601 0.0028004 0.8655    999  0.432
+#Residuals 21 0.067950 0.0032357 
 #No evidence of differences in dispersion - no difference in within-group variability
 boxplot(betadisper_res)
 adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
-#         Df SumOfSqs    R2      F Pr(>F)  
-#Model     2   0.9574 0.116 1.3779  0.013 *
-#Residual 21   7.2961 0.884                
-#Total    23   8.2535 1.000  
-#Significant difference in community composition between treatments, treatment explains ~11.6% of variation     
+#         Df SumOfSqs      R2      F Pr(>F)   
+#Model     2   0.9818 0.11727 1.3949   0.01 **
+#Residual 21   7.3909 0.88273                 
+#Total    23   8.3727 1.00000   
+#Significant difference in community composition between treatments, treatment explains ~11.7% of variation  
+
+pairwise_permanova <- function(dist_matrix, metadata, group_col) {
+  groups <- unique(metadata[[group_col]])
+  pairs <- combn(groups, 2, simplify = FALSE)
+  results <- lapply(pairs, function(pair) {
+    keep <- metadata[[group_col]] %in% pair
+    dist_sub <- as.dist(as.matrix(dist_matrix)[keep, keep])
+    meta_sub <- metadata[keep, , drop = FALSE]
+    formula <- as.formula(paste("dist_sub ~", group_col))
+    result <- adonis2(
+      formula,
+      data = meta_sub,
+      permutations = 999
+    )
+    data.frame(
+      Group1 = pair[1],
+      Group2 = pair[2],
+      F = result$F[1],
+      R2 = result$R2[1],
+      p = result$`Pr(>F)`[1]
+    )
+  })
+  results <- do.call(rbind, results)
+  results$p_adj <- p.adjust(results$p, method = "BH")
+  results
+}  
+
+pairwise_results <- pairwise_permanova(
+  jaccard,
+  meta_f,
+  "treatment"
+)
+
+pairwise_results 
+#       Group1      Group2        F         R2     p p_adj
+#1     Control Insecticide 1.690744 0.10775425 0.011 0.033
+#2     Control    Microsap 1.133269 0.07488594 0.168 0.168
+#3 Insecticide    Microsap 1.371026 0.08919547 0.048 0.072
 ```
-Treatments affect which taxa are present/absent, not their relative abundances - community membership shifts but dominant taxa abundances are stable. Treatments do not strongly reshape dominant community structure, but they do cause taxa turnover (gains/losses of rarer taxa) - hidden signal in rare taxa.
+Treatments affect which taxa are present/absent, not their relative abundances - community membership shifts but dominant taxa abundances are stable. Treatments do not strongly reshape dominant community structure, but they do cause taxa turnover (gains/losses of rarer taxa) - hidden signal in rare taxa. The difference appears to be driven by the Insecticide group and is significant after multiple testing correction betwee control and insecticide treatments. The insecticide treatment is not really relevant to our ivestigation of the microsap treatments, it is unclear why it would have an effect on bacteria.
+
+![R beta diversity plots for 16S seqeunces](figures/dada-16s-bray.png)
 
 Presence/abscence - bubble plot:
 ```R
@@ -6145,9 +6221,19 @@ rownames(annotation_row) <- rownames(mat_ordered)
 #Optional: gaps
 gaps <- cumsum(table(meta_ordered$treatment))
 
+annotation_colors <- list(
+  Treatment = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )
+)
+
 pheatmap(
   mat_ordered,
-  color = colorRampPalette(c("white", "blue", "red"))(100),
+  color = colorRampPalette(
+    c("white", "blue", "red")
+  )(100),
   breaks = seq(
     min(mat_ordered, na.rm = TRUE),
     max(mat_ordered, na.rm = TRUE),
@@ -6156,11 +6242,13 @@ pheatmap(
   cluster_rows = FALSE,
   cluster_cols = TRUE,
   annotation_row = annotation_row,
+  annotation_colors = annotation_colors,
   gaps_row = gaps,
   border_color = "grey90",
   fontsize_col = 6
 )
 ```
+![R heatmap presence/abscence plots for 16S seqeunces](figures/dada-16s-heat.png)
 
 ### ITS <a name="44"></a>
 
@@ -6244,15 +6332,29 @@ all_taxa <- unique(df$Genus)
 
 auto_taxa <- setdiff(all_taxa, "Other")
 
-auto_cols <- setNames(c(
-  "darkblue",  "#008000", "sienna3", "orange",
-  "deeppink4",  "skyblue3", "red3"
-  , "maroon3", "wheat3", "yellow"
-), auto_taxa)
+#auto_cols <- setNames(c(
+#  "darkblue",  "#008000", "sienna3", "orange",
+#  "deeppink4",  "skyblue3", "red3"
+#  , "maroon3", "wheat3", "yellow", "black", "red", "white"
+#), auto_taxa)
+#other_col <- c("Other" = "grey80")
 
-other_col <- c("Other" = "grey80")
+final_cols <- c(
+  "g__Wickerhamomyces" = "darkblue",
+  "g__unclassified_Root" = "darkgrey",
+  "g__Nakazawaea" = "sienna3",
+  "g__Kuraishia" = "orange",
+  "g__Ogataea" = "deeppink4",
+  "g__unclassified_Ophiostomataceae" = "firebrick",
+  "g__unclassified_Nectriaceae" = "red3",
+  "g__Endoconidiophora" = "yellow",
+  "g__Peterozyma" = "wheat3",
+  "g__unclassified_Sordariomycetes_fam_Incertae_sedis" = "tomato2",
+  "g__Grosmannia" = "lightcoral",
+  "Other" = "grey80"
+)
 
-final_cols <- c(auto_cols, other_col)
+#final_cols <- c(auto_cols, other_col)
 
 df$Genus <- factor(df$Genus, levels = names(final_cols))
 
@@ -6278,6 +6380,8 @@ ggplot(df_sub, aes(x = Label, y = Abundance, fill = Genus)) +
     axis.text.x = element_text(angle = 90, hjust = 1)
   )
 ```
+![R Relative abundance plots for ITS seqeunces](figures/dada-its-abundance.png)
+
 Alpha diversity:
 ```R
 get_alpha <- function(ps_obj, meta_obj) {
@@ -6345,6 +6449,8 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #Insecticide 0.96    -          
 #Microsap    0.96    0.96 
 ```
+![R alpha diversity plots for ITS seqeunces](figures/dada-its-shannon.png)
+
 beta diversity:
 
 ```R
@@ -6451,12 +6557,14 @@ permutest(betadisper_res, permutations = 999)
 boxplot(betadisper_res)
 adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
 #         Df SumOfSqs      R2      F Pr(>F)
-#Model     2   0.5967 0.10077 1.1766  0.163
+#Model     2   0.5967 0.10077 1.1766  0.122
 #Residual 21   5.3251 0.89923              
 #Total    23   5.9218 1.00000  
 #No significant difference in community composition between treatments, treatment explains ~10.1% of variation     
 ```
 No differences
+
+![R beta diversity plots for 16S seqeunces](figures/dada-its-bray.png)
 
 Presence/abscence - bubble plot:
 ```R
@@ -6606,3 +6714,4 @@ pheatmap(
   fontsize_col = 7
 )
 ```
+![R heatmap presence/abscence plots for ITS seqeunces](figures/dada-its-heat.png)
