@@ -1983,6 +1983,8 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #Insecticide 0.57    -          
 #Microsap    0.65    0.48 
 ```
+![R alpha diversity plots for ITS seqeunces](figures/emu-16s-shannon.png)
+
 beta diversity:
 
 ```R
@@ -2033,16 +2035,16 @@ ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
 betadisper_res <- betadisper(bray, meta_f$treatment)
 permutest(betadisper_res, permutations = 999)
 #          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
-#Groups     2 0.00869 0.0043441 0.2625    999  0.773
-#Residuals 21 0.34756 0.0165503 
+#Groups     2 0.00299 0.0014926 0.0772    999   0.93
+#Residuals 21 0.40622 0.0193440 
 #No evidence of differences in dispersion - no difference in within-group variability
 boxplot(betadisper_res)
 adonis2(bray ~ treatment, data = meta_f, permutations = 999)
 #         Df SumOfSqs      R2      F Pr(>F)
-#Model     2   0.5000 0.05983 0.6682  0.888
-#Residual 21   7.8558 0.94017              
-#Total    23   8.3557 1.00000  
-#No significant difference in community composition between treatments, treatment explains only ~5.9% of variation in community composition     
+#Model     2   0.5363 0.06489 0.7287  0.804
+#Residual 21   7.7285 0.93511              
+#Total    23   8.2649 1.00000  
+#No significant difference in community composition between treatments, treatment explains only ~6.4% of variation in community composition     
 
 #######
 
@@ -2083,17 +2085,19 @@ pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
 betadisper_res <- betadisper(jaccard, meta_f$treatment)
 permutest(betadisper_res, permutations = 999)
 #          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
-#Groups     2 0.004472 0.0022358 0.2319    999  0.775
-#Residuals 21 0.202460 0.0096410
+#Groups     2 0.001959 0.0009797 0.1172    999  0.895
+#Residuals 21 0.175561 0.0083600 
 #No evidence of differences in dispersion - no difference in within-group variability
 boxplot(betadisper_res)
 adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
 #         Df SumOfSqs      R2      F Pr(>F)
-#Model     2   0.7645 0.10106 1.1805    0.2
-#Residual 21   6.7997 0.89894              
-#Total    23   7.5641 1.00000 
-#No significant difference in community composition between treatments, treatment explains ~10.1% of variation     
+#Model     2   0.7729 0.09931 1.1577  0.216
+#Residual 21   7.0102 0.90069              
+#Total    23   7.7831 1.00000
+#No significant difference in community composition between treatments, treatment explains ~9.9% of variation     
 ```
+![R beta diversity plots for 16S seqeunces](figures/emu-16s-bray.png)
+
 No differences
 
 Presence/abscence - bubble plot:
@@ -2226,9 +2230,19 @@ rownames(annotation_row) <- rownames(mat_ordered)
 #Optional: gaps
 gaps <- cumsum(table(meta_ordered$treatment))
 
+annotation_colors <- list(
+  Treatment = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )
+)
+
 pheatmap(
   mat_ordered,
-  color = colorRampPalette(c("white", "blue", "red"))(100),
+  color = colorRampPalette(
+    c("white", "blue", "red")
+  )(100),
   breaks = seq(
     min(mat_ordered, na.rm = TRUE),
     max(mat_ordered, na.rm = TRUE),
@@ -2237,11 +2251,13 @@ pheatmap(
   cluster_rows = FALSE,
   cluster_cols = TRUE,
   annotation_row = annotation_row,
+  annotation_colors = annotation_colors,
   gaps_row = gaps,
   border_color = "grey90",
-  fontsize_col = 5
+  fontsize_col = 6
 )
 ```
+![R heatmap presence/abscence plots for 16S seqeunces](figures/emu-16s-heat.png)
 
 #### Diversity analysis and plotting - ITS <a name="20"></a>
 
@@ -2449,6 +2465,8 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #Insecticide 0.35    -          
 #Microsap    0.25    0.96 
 ```
+![R alpha diversity plots for ITS seqeunces](figures/emu-its-shannon.png)
+
 beta diversity:
 
 ```R
@@ -2499,15 +2517,15 @@ ggplot(pcoa_df, aes(PC1, PC2, color = treatment)) +
 betadisper_res <- betadisper(bray, meta_f$treatment)
 permutest(betadisper_res, permutations = 999)
 #          Df  Sum Sq   Mean Sq      F N.Perm Pr(>F)
-#Groups     2 0.09413 0.047067 1.5849    999  0.228
-#Residuals 21 0.62365 0.029698 
+#Groups     2 0.09413 0.047067 1.5849    999  0.219
+#Residuals 21 0.62365 0.029698
 #No evidence of differences in dispersion - no difference in within-group variability
 boxplot(betadisper_res)
 adonis2(bray ~ treatment, data = meta_f, permutations = 999)
 #         Df SumOfSqs      R2      F Pr(>F)
-#Model     2   0.6562 0.09005 1.0391  0.384
+#Model     2   0.6562 0.09005 1.0391  0.378
 #Residual 21   6.6307 0.90995              
-#Total    23   7.2869 1.00000   
+#Total    23   7.2869 1.00000    
 #No significant difference in community composition between treatments, treatment explains only ~9.0% of variation in community composition     
 
 #######
@@ -2549,18 +2567,20 @@ pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
 betadisper_res <- betadisper(jaccard, meta_f$treatment)
 permutest(betadisper_res, permutations = 999)
 #          Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
-#Groups     2 0.003626 0.0018129 0.2333    999  0.794
-#Residuals 21 0.163153 0.0077692 
+#Groups     2 0.003626 0.0018129 0.2333    999  0.814
+#Residuals 21 0.163153 0.0077692  
 #No evidence of differences in dispersion - no difference in within-group variability
 boxplot(betadisper_res)
 adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
 #         Df SumOfSqs      R2      F Pr(>F)
-#Model     2   0.5180 0.08328 0.9539  0.558
+#Model     2   0.5180 0.08328 0.9539  0.532
 #Residual 21   5.7016 0.91672              
-#Total    23   6.2195 1.00000 
+#Total    23   6.2195 1.00000  
 #No significant difference in community composition between treatments, treatment explains ~8.3% of variation     
 ```
 No differences
+
+![R beta diversity plots for ITS seqeunces](figures/emu-its-bray.png)
 
 Presence/abscence - bubble plot:
 ```R
@@ -2692,9 +2712,19 @@ rownames(annotation_row) <- rownames(mat_ordered)
 #Optional: gaps
 gaps <- cumsum(table(meta_ordered$treatment))
 
+annotation_colors <- list(
+  Treatment = c(
+    "Control" = "royalblue",
+    "Insecticide" = "#CC6666",
+    "Microsap" = "#66CC66"
+  )
+)
+
 pheatmap(
   mat_ordered,
-  color = colorRampPalette(c("white", "blue", "red"))(100),
+  color = colorRampPalette(
+    c("white", "blue", "red")
+  )(100),
   breaks = seq(
     min(mat_ordered, na.rm = TRUE),
     max(mat_ordered, na.rm = TRUE),
@@ -2703,11 +2733,13 @@ pheatmap(
   cluster_rows = FALSE,
   cluster_cols = TRUE,
   annotation_row = annotation_row,
+  annotation_colors = annotation_colors,
   gaps_row = gaps,
   border_color = "grey90",
-  fontsize_col = 7
+  fontsize_col = 6
 )
 ```
+![R heatmap presence/abscence plots for ITS seqeunces](figures/emu-its-heat.png)
 
 ### NanoVI - unfiltered <a name="21"></a>
 
@@ -4592,7 +4624,7 @@ Treatment has a statistically significant effect on community composition, expla
 
 There are no significant differences in the presence/abscence of individual taxa.
 
-![R beta diversity plots for 16S seqeunces](figures/savont-its-bray.png)
+![R beta diversity plots for ITS seqeunces](figures/savont-its-bray.png)
 
 Presence/abscence + adundance - heatmap:
 ```R
@@ -6564,7 +6596,7 @@ adonis2(jaccard ~ treatment, data = meta_f, permutations = 999)
 ```
 No differences
 
-![R beta diversity plots for 16S seqeunces](figures/dada-its-bray.png)
+![R beta diversity plots for ITS seqeunces](figures/dada-its-bray.png)
 
 Presence/abscence - bubble plot:
 ```R
