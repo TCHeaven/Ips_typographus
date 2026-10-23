@@ -1987,6 +1987,22 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #            Control Insecticide
 #Insecticide 0.57    -          
 #Microsap    0.65    0.48 
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  0.809  0.4047   0.715  0.501
+#Residuals   21 11.883  0.5659 
 ```
 ![R alpha diversity plots for ITS seqeunces](figures/emu-16s-shannon.png)
 
@@ -2474,6 +2490,25 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #            Control Insecticide
 #Insecticide 0.35    -          
 #Microsap    0.25    0.96 
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  1.088  0.5439   2.243  0.131
+#Residuals   21  5.091  0.2424 
+
+kruskal.test(Shannon ~ treatment, data = alpha_df)
+#Kruskal-Wallis chi-squared = 3.215, df = 2, p-value = 0.2004 
 ```
 ![R alpha diversity plots for ITS seqeunces](figures/emu-its-shannon.png)
 
@@ -4938,7 +4973,7 @@ ggplot(alpha_df, aes(x = treatment, y = Shannon, fill = treatment)) +
 #######
 
 by(alpha_df$Shannon, alpha_df$treatment, shapiro.test)
-#Control - p-value = 0.01434 - normal
+#Control - p-value = 0.01434 - not normal
 #Insecticide - p-value = 0.6507 - normal
 #Microsap - p-value = 0.6495 - normal
 
@@ -5555,6 +5590,8 @@ chim_track <- cbind(nonchim = nonchim_reads, chimera = chim_reads, chimera_fract
 #Plot merged read lengths after chimera removal:
 asv_lengths <- nchar(colnames(seqtab.nochim))
 summary(asv_lengths)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#  280.0   402.0   407.0   412.7   427.0   548.0 
 hist(asv_lengths, breaks=50, main="ASV lengths after chimera removal", xlab="Length (bp)")
 
 # Save results
@@ -5670,6 +5707,8 @@ chim_track <- cbind(nonchim = nonchim_reads, chimera = chim_reads, chimera_fract
 #Plot merged read lengths after chimera removal:
 asv_lengths <- nchar(colnames(seqtab.nochim))
 summary(asv_lengths)
+#  Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#  281.0   307.0   331.0   340.8   358.5   542.0 
 hist(asv_lengths, breaks=50, main="ASV lengths after chimera removal", xlab="Length (bp)")
 
 # Save results
@@ -6737,6 +6776,22 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #            Control Insecticide
 #Insecticide 0.29    -          
 #Microsap    0.96    0.29    
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  1.452  0.7260   1.244  0.309
+#Residuals   21 12.258  0.5837 
 ```
 ![R alpha diversity plots for 16S seqeunces](figures/dada-16s-shannon2.png)
 
@@ -7413,6 +7468,22 @@ pairwise.wilcox.test(alpha_df$Shannon,
 #            Control Insecticide
 #Insecticide 0.49    -          
 #Microsap    0.49    0.57 
+
+alpha_df$treatment <- factor(
+  alpha_df$treatment,
+  levels = c("Control", "Insecticide", "Microsap")
+)
+
+#One-way ANOVA
+anova_shannon <- aov(
+  Shannon ~ treatment,
+  data = alpha_df
+)
+
+summary(anova_shannon)
+#            Df Sum Sq Mean Sq F value Pr(>F)
+#treatment    2  0.640  0.3198   1.285  0.298
+#Residuals   21  5.227  0.2489  
 ```
 ![R alpha diversity plots for ITS seqeunces](figures/dada-its-shannon2.png)
 

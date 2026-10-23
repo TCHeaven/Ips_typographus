@@ -1965,6 +1965,1515 @@ awk -F'\t' '$4 != "no-match"' ASV_vs_reads_BOLD.tsv > ASV_vs_reads_BOLD_informat
 
 ```
 
+## Analyse <a name="27"></a>
+
+Importing into R
+```R
+install.packages(c(
+  "readxl",
+  "tidyverse",
+  "janitor",
+  "vegan",
+  "irr",
+  "writexl",
+  "dplyr", 
+  "tidyr", 
+  "purrr",
+  "tibble",
+  "stringr",
+  "ggrepel"
+))
+
+if (!requireNamespace("phyloseq", quietly = TRUE)) {
+  if (!requireNamespace("BiocManager", quietly = TRUE)) {
+    install.packages("BiocManager")
+  }
+  BiocManager::install("phyloseq")
+}
+
+library(readxl)
+library(tidyverse)
+library(janitor)
+library(vegan)
+library(irr)
+library(writexl)
+library(dplyr)
+library(purrr)
+library(tidyr)
+library(phyloseq)
+library(tibble)
+library(stringr)
+library(ggrepel)
+
+setwd("C:/Users/THeaven/OneDrive - Scientific Network South Tyrol/R")
+set.seed(1)
+
+asv_file <- "merged_ASV_classifications_6.xlsx"
+
+#ASV pipeline inputs:
+asv_28S_long     <- read_xlsx(asv_file, sheet = "28S",                    na = c("", "NA")) |> clean_names()
+asv_28S_long <- asv_28S_long |> mutate(sample_id = sample |> str_remove("^28S_") |> str_remove("^D2A_")|> str_to_lower())
+asv_28S_counts   <- read_xlsx(asv_file, sheet = "28S_ASVs_to_samples",    na = c("", "NA")) |> clean_names()
+asv_28S_counts <- asv_28S_counts |> rename_with( ~ .x |> str_remove("^x28s_d2a_") |> str_remove("^x28s_"), -feature_id )
+manual_28S       <- read_xlsx(asv_file, sheet = "28S_tall_manual_only",   na = c("", "NA")) |> clean_names()
+
+asv_18S_long     <- read_xlsx(asv_file, sheet = "18S",                    na = c("", "NA")) |> clean_names()
+asv_18S_long <- asv_18S_long |> mutate(sample_id = sample |> str_remove("^18S_") |> str_remove("^NEM_")|> str_to_lower())
+asv_18S_counts   <- read_xlsx(asv_file, sheet = "18S_ASVs_to_samples",    na = c("", "NA")) |> clean_names()
+asv_18S_counts <- asv_18S_counts |> rename_with( ~ .x |> str_remove("^x18s_nem_") |> str_remove("^NEM_"), -feature_id )
+manual_18S       <- read_xlsx(asv_file, sheet = "18S_tall_manual_only",   na = c("", "NA")) |> clean_names()
+
+
+name_fixes <- c(
+  "\\bDiplogasteridae\\b" = "Diplogastridae"
+)
+
+for (nm in c("asv_28S_long", "asv_28S_counts", "manual_28S",
+             "asv_18S_long", "asv_18S_counts", "manual_18S")) {
+  assign(nm,
+         get(nm) |>
+           mutate(across(where(is.character), \(x) str_replace_all(x, name_fixes))))
+}
+
+#Read pipeline inputs
+veg <- "vegan_input_all.xlsx" 
+sample_metadata <- read_xlsx(veg, "sample_metadata") |>
+  mutate(yr    = coalesce(suppressWarnings(as.integer(year)),
+                          2000L + as.integer(str_extract(group, "\\d{2}$"))),
+         month = as.integer(str_match(group, "^[A-Z]_(\\d{2})_\\d{2}$")[, 2]),
+         region = if_else(location %in% c("Abetone","Croatia","Romania","Russia"),
+                          "non-alpine", "alpine"))
+
+
+sample_metadata <- read_xlsx(veg, "sample_metadata") |>
+  clean_names() |>
+  mutate(
+    sample_id = str_to_lower(sample_id),
+    yr = coalesce(
+      suppressWarnings(as.integer(year)),
+      2000L + as.integer(str_extract(group, "\\d{2}$"))
+    ),
+    month = as.integer(
+      str_match(group, "^[A-Z]_(\\d{2})_\\d{2}$")[, 2]
+    ),
+    country = case_when(
+      location %in% c("Innichen", "Tiers", "Abetone", "Prad", "Italy") ~ "Italy",
+      location %in% c("Kals", "Austria") ~ "Austria",
+      location %in% c("Lika", "Croatia") ~ "Croatia",
+      location %in% c("Cluj", "Romania") ~ "Romania",
+      location %in% c("Moscow", "Russia") ~ "Russia",
+      TRUE ~ NA_character_
+    ),
+    locality = case_when(
+      location %in% c("Innichen", "Tiers", "Abetone", "Prad") ~ location,
+      location %in% c("Lika", "Croatia") ~ "Lika",
+      location %in% c("Cluj", "Romania") ~ "Cluj",
+      location %in% c("Moscow", "Russia") ~ "Moscow",
+      location == "Kals" ~ "Kals",
+      TRUE ~ NA_character_
+    ),
+    region = if_else(
+      country %in% c("Croatia", "Romania", "Russia"),
+      "non-alpine",
+      "alpine"
+    )
+  )
+
+
+
+nri <- "Nematode_reads_info.xlsx"
+clean_tax <- function(x) x |> str_squish() |> str_replace_all("[ _]+", "_") |>
+  str_replace("sp\\._?O717", "sp._O717")
+reads <- read_xlsx(nri, sheet = "reads_I_II") |>
+  clean_names() |>
+  mutate(
+    sample_id = str_to_lower(str_trim(sample_id)),
+    sample_id = if_else(
+      sample_id %in% str_to_lower(str_trim(sample_metadata$sample_id)),
+      sample_id,
+      str_remove(sample_id, "_1$")
+    )
+  ) |>
+  transmute(
+    sample_id,
+    altitude,
+    qc_reads = reads_after_quality_filtering,
+    nem_reads = nematode_reads_pident_95,
+    prop_nem = nem_reads / qc_reads
+  )
+
+sample_metadata <- sample_metadata |>
+  left_join(
+    reads |> select(sample_id, altitude, qc_reads),
+    by = "sample_id"
+  )
+
+write_xlsx(sample_metadata, "nematode_sample_metadata.xlsx")
+```
+Get nematode-only annotations:
+```R
+#Keep only Nematoda ASVs, keep only needed columns, give both markers the same rank column names (Kingdom ... Species) so they can be compared.
+
+nem_28S <- asv_28S_long |>
+  dplyr::filter(tbl_tax_2_phyla == "Nematoda") |>
+  dplyr::select(sample_id, asv, count, tbl_tax_2_domain_kingdom, tbl_tax_2_phyla,
+                tbl_tax_2_class, tbl_tax_2_order, tbl_tax_2_family,
+                tbl_tax_2_genus, tbl_tax_2_species) |>
+  dplyr::rename(Kingdom = tbl_tax_2_domain_kingdom, Phylum = tbl_tax_2_phyla,
+                Class = tbl_tax_2_class, Order = tbl_tax_2_order,
+                Family = tbl_tax_2_family, Genus = tbl_tax_2_genus,
+                Species = tbl_tax_2_species)
+
+nem_18S <- asv_18S_long |>
+  dplyr::filter(table8_phylum == "Nematoda") |>
+  dplyr::select(sample_id, asv, count, table8_domain_kingdom, table8_phylum,
+                table8_class, table8_order, table8_family, table8_genus,
+                table8_species) |>
+  dplyr::rename(Kingdom = table8_domain_kingdom, Phylum = table8_phylum,
+                Class = table8_class, Order = table8_order, Family = table8_family,
+                Genus = table8_genus, Species = table8_species)
+
+#Tidy the taxonomy strings: trim whitespace, and turn "" and "NA" text into real NA. Otherwise "NA" is counted as a taxon and ends up in shared-taxa lists.
+nem_18S <- nem_18S |>
+  mutate(across(all_of(c("Class", "Order", "Family", "Genus", "Species")), \(x) x |> str_squish() |> na_if("") |> na_if("NA")))
+nem_28S <- nem_28S |>
+  mutate(across(all_of(c("Class", "Order", "Family", "Genus", "Species")), \(x) x |> str_squish() |> na_if("") |> na_if("NA")))
+```
+
+### Compare 18S and 28S markers
+
+Abundance concordance: Find the % of total ASV count that are from the nematoda phylum:
+```R
+#For each sample: total reads, reads assigned to phylum Nematoda, and the percentage.
+
+#28S summary
+summary_28S <- asv_28S_long |>
+  group_by(sample_id) |>
+  summarise(
+    total_asv_28S = sum(count, na.rm = TRUE),
+    nematode_count_28S = sum(count[tbl_tax_2_phyla == "Nematoda"], na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    nematode_percent_28S = if_else(total_asv_28S > 0,
+                                   100 * nematode_count_28S / total_asv_28S,
+                                   NA_real_)
+  )
+
+#18S summary
+summary_18S <- asv_18S_long |>
+  group_by(sample_id) |>
+  summarise(
+    total_asv_18S = sum(count, na.rm = TRUE),
+    nematode_count_18S = sum(count[table8_phylum == "Nematoda"], na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    nematode_percent_18S = if_else(total_asv_18S > 0,
+                                   100 * nematode_count_18S / total_asv_18S,
+                                   NA_real_)
+  )
+
+sample_metadata <- sample_metadata |>
+  select(-any_of(c(names(summary_18S)[-1], names(summary_28S)[-1]))) |>
+  left_join(summary_18S, by = "sample_id") |>
+  left_join(summary_28S, by = "sample_id")
+
+write_xlsx(sample_metadata, "nematode_sample_metadata.xlsx")
+```
+Define the paired sample set
+```R
+MIN_READS <- 0     # min nematode-assigned reads per marker per sample
+
+#Get one row per sample sequenced with BOTH markers, with total reads, nematode reads, and nematode % for each marker. Samples with zero nematode are retained, with 0 (not NA).
+depth <- inner_join(
+  summary_18S |> select(sample_id, total_18S = total_asv_18S),
+  summary_28S |> select(sample_id, total_28S = total_asv_28S),
+  by = "sample_id"
+) |>
+  filter(total_18S > 0, total_28S > 0)
+
+nem_reads_18S <- nem_18S |> group_by(sample_id) |>
+  summarise(nem_18S = sum(count, na.rm = TRUE), .groups = "drop")
+nem_reads_28S <- nem_28S |> group_by(sample_id) |>
+  summarise(nem_28S = sum(count, na.rm = TRUE), .groups = "drop")
+
+depth <- depth |>
+  left_join(nem_reads_18S, by = "sample_id") |>
+  left_join(nem_reads_28S, by = "sample_id") |>
+  mutate(across(c(nem_18S, nem_28S), \(x) replace_na(x, 0)),   # no nematodes = 0 reads
+         pct_18S = 100 * nem_18S / total_18S,
+         pct_28S = 100 * nem_28S / total_28S) |>
+  left_join(sample_metadata |> select(sample_id, location, group, yr), by = "sample_id")
+
+#ids = samples that pass the depth gate in BOTH markers. This is the main analysis set.
+ids <- depth |>
+  filter(nem_18S >= MIN_READS, nem_28S >= MIN_READS) |>
+  pull(sample_id)
+
+cat("Samples analysed:", length(ids), "of", nrow(depth), "paired\n")
+print(depth |> filter(sample_id %in% ids) |> count(group))
+```
+Classification resolution for the two markers for nematode taxa
+```R
+RANKS     <- c("Class", "Order", "Family", "Genus", "Species")
+
+resolution <- bind_rows(nem_18S |> mutate(marker = "18S"),
+                        nem_28S |> mutate(marker = "28S")) |>
+  filter(sample_id %in% ids) |>
+  pivot_longer(all_of(RANKS), names_to = "Rank", values_to = "taxon") |>
+  group_by(marker, Rank) |>
+  summarise(pct_reads_classified = 100 * sum(count[!is.na(taxon)]) / sum(count),
+            .groups = "drop") |>
+  mutate(Rank = factor(Rank, RANKS)) |>
+  arrange(marker, Rank)
+resolution
+#   marker Rank    pct_reads_classified
+# 1 18S    Class                  99.5 
+# 2 18S    Order                  98.5 
+# 3 18S    Family                 96.3 
+# 4 18S    Genus                  95.3 
+# 5 18S    Species                 3.37
+# 6 28S    Class                 100.0 
+# 7 28S    Order                  96.1 
+# 8 28S    Family                 92.3 
+# 9 28S    Genus                  91.0 
+#10 28S    Species                77.7 
+```
+
+Abundance concordance: are samples / taxa abundant in 18S also abundant in 28S?
+```R
+#For each filter setting (mr = MIN_REL value) and each rank (rk):
+#a. sum reads per sample x taxon, separately for 18S and 28S
+#b. convert to within-sample relative abundance (among classified reads)
+#c. drop taxa below mr, then renormalise so each sample sums to 1
+#d. join the markers into one long table, with a row for EVERY paired sample x EVERY taxon seen at that rank (zeros filled in)
+#e. flag samples where both markers resolve >= 1 taxon (`has`)
+#f. compute per-sample overlap + Bray-Curtis similarity
+
+MIN_REL   <- 0    # min within-sample relative abundance of a taxon (0 = off)
+MIN_REL_GRID   <- sort(unique(c(0, 0.01, 0.05, MIN_REL)))
+
+pair_all       <- list()
+per_sample_all <- list()
+
+for (mr in MIN_REL_GRID) {
+  key <- as.character(mr)
+  pair_all[[key]]       <- list()
+  per_sample_all[[key]] <- list()
+  for (rk in RANKS) {
+    #a-c: 18S relative abundance table (reads without a label at this rank are excluded, so relative abundance is among CLASSIFIED reads)
+    t18 <- nem_18S |>
+      filter(sample_id %in% depth$sample_id, !is.na(.data[[rk]])) |>
+      group_by(sample_id, taxon = .data[[rk]]) |>
+      summarise(n_18S = sum(count, na.rm = TRUE), .groups = "drop") |>
+      group_by(sample_id) |>
+      mutate(rel_18S = n_18S / sum(n_18S)) |>
+      filter(rel_18S >= mr) |>
+      mutate(rel_18S = rel_18S / sum(rel_18S)) |>    
+      ungroup()
+    #same for 28S
+    t28 <- nem_28S |>
+      filter(sample_id %in% depth$sample_id, !is.na(.data[[rk]])) |>
+      group_by(sample_id, taxon = .data[[rk]]) |>
+      summarise(n_28S = sum(count, na.rm = TRUE), .groups = "drop") |>
+      group_by(sample_id) |>
+      mutate(rel_28S = n_28S / sum(n_28S)) |>
+      filter(rel_28S >= mr) |>
+      mutate(rel_28S = rel_28S / sum(rel_28S)) |>
+      ungroup()
+    #d: join markers. full_join keeps taxa seen by only one marker.
+    pr <- full_join(t18, t28, by = c("sample_id", "taxon"))
+    if (nrow(pr) == 0) next                          
+    pr <- pr |>
+      complete(sample_id = depth$sample_id, taxon) |> 
+      mutate(across(c(n_18S, n_28S, rel_18S, rel_28S), \(x) replace_na(x, 0))) |>
+      #e: `has` = both markers resolve at least one taxon in this sample
+      group_by(sample_id) |>
+      mutate(has = any(rel_18S > 0) & any(rel_28S > 0)) |>
+      ungroup()  
+    pair_all[[key]][[rk]] <- pr
+    #f: per-sample metrics.
+    #   jaccard            = shared taxa / all taxa found by either marker
+    #   contain_18S_in_28S = share of 18S taxa that 28S also found
+    #   contain_28S_in_18S = share of 28S taxa that 18S also found
+    #   bc_similarity      = 1 - Bray-Curtis dissimilarity (1 = identical
+    #                        communities, 0 = nothing in common). Both vectors
+    #                        sum to 1, so the denominator is 2.
+    per_sample_all[[key]][[rk]] <- pr |>
+      group_by(sample_id) |>
+      summarise(
+        n_taxa_18S = sum(rel_18S > 0),
+        n_taxa_28S = sum(rel_28S > 0),
+        n_shared   = sum(rel_18S > 0 & rel_28S > 0),
+        n_union    = sum(rel_18S > 0 | rel_28S > 0),
+        jaccard             = n_shared / n_union,
+        contain_18S_in_28S  = n_shared / n_taxa_18S,
+        contain_28S_in_18S  = n_shared / n_taxa_28S,
+        bc_similarity = 1 - sum(abs(rel_18S - rel_28S)) / sum(rel_18S + rel_28S),
+        .groups = "drop"
+      ) |>
+      mutate(has_both = n_taxa_18S > 0 & n_taxa_28S > 0,
+             Rank = rk)
+  }
+}
+
+key_main <- as.character(MIN_REL)
+
+#Taxa never detected by either marker in these samples are dropped, so shared zeros do not inflate correlations or kappa.
+main_pair <- list()
+for (rk in names(pair_all[[key_main]])) {
+  main_pair[[rk]] <- pair_all[[key_main]][[rk]] |>
+    filter(sample_id %in% ids) |>
+    group_by(taxon) |>
+    filter(any(rel_18S > 0 | rel_28S > 0)) |>
+    ungroup()
+}
+
+#per-sample metrics for `ids`, only samples where both markers resolved something at that rank.
+main_ps <- map(per_sample_all[[key_main]],
+               \(x) filter(x, sample_id %in% ids, has_both))
+```
+
+```R
+#Nematode share of reads, per sample, uses ALL paired samples including zeros. Zeros are real information: "this marker saw no nematodes here".
+cor.test(depth$pct_18S, depth$pct_28S, method = "spearman", exact = FALSE)
+#data:  depth$pct_18S and depth$pct_28S
+#S = 40889, p-value = 7.349e-07
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#      rho 
+#0.5207596
+
+ggplot(depth, aes(x = pct_18S, y = pct_28S, colour = group)) +
+  geom_point() +
+  geom_abline(linetype = 2) +                       # dashed 1:1 line
+  scale_x_sqrt() + scale_y_sqrt() +                 # sqrt spreads out the many small values
+  labs(x = "18S reads assigned to Nematoda (%)",
+       y = "28S reads assigned to Nematoda (%)",
+       title = "Nematode share of reads, per sample (all paired samples)") +
+  theme_classic()
+
+#Genus level: is a genus abundant in 18S also abundant in 28S? Uses main_pair$Genus: all samples in `ids`, with a row for every sample x genus. `rel_*` is the genus's share of CLASSIFIED nematode reads.
+taxon_concordance <- main_pair$Genus |>
+  group_by(taxon) |>
+  summarise(
+    n_samples    = n(),
+    n_28S        = sum(rel_28S > 0),                 # samples where 28S detects it
+    n_18S        = sum(rel_18S > 0),
+    n_both       = sum(rel_18S > 0 & rel_28S > 0),
+    mean_rel_18S = mean(rel_18S),
+    mean_rel_28S = mean(rel_28S),
+    #kappa = agreement on presence/absence beyond chance. Undefined when a
+    #marker detects the taxon in none or all samples (no variance).
+    kappa = if (n_28S > 0 && n_28S < n_samples && n_18S > 0 && n_18S < n_samples) {
+      irr::kappa2(cbind(as.integer(rel_18S > 0), as.integer(rel_28S > 0)))$value
+    } else {
+      NA_real_
+    },
+    #rho = do samples with more of this genus in 18S also have more in 28S?
+    rho = suppressWarnings(cor(rel_18S, rel_28S, method = "spearman")),
+    .groups = "drop"
+  ) |>
+  arrange(desc(n_28S))
+print(taxon_concordance)
+#   taxon               n_samples n_28S n_18S n_both mean_rel_18S mean_rel_28S   kappa      rho
+# 1 Micoletzkya                80    68    80     68    0.711        0.706     NA      0.567
+# 2 Diplogasteroides           80    49    59     46    0.0676       0.0789     0.552  0.716
+# 3 Contortylenchus            80    21    28     21    0.210        0.103      0.796  0.900
+# 4 Parasitorhabditis          80    21    41     21    0.00431      0.00373    0.506  0.646
+# 5 Cryptaphelenchus           80    10    39     10    0.00464      0.0262     0.261  0.547
+# 6 Bursaphelenchus            80     8    27      8    0.00217      0.000218   0.358  0.533
+# 7 Bunonema                   80     2    15      2    0.000428     0.0000132  0.200  0.342
+# 8 Meloidogyne                80     2     0      0    0            0.000388  NA     NA    
+# 9 Cephalenchus               80     1     0      0    0            0.00114   NA     NA    
+#10 Devibursaphelenchus        80     1     0      0    0            0.00538   NA     NA    
+#11 Malenchus                  80     1     0      0    0            0.000238  NA     NA    
+#12 Ditylenchus                80     0     6      0    0.0000837    0         NA     NA    
+#13 Parasitylenchus            80     0     3      0    0.000243     0         NA     NA 
+
+ggplot(taxon_concordance,
+       aes(x = mean_rel_18S, y = mean_rel_28S, label = taxon)) +
+  geom_point(size = 3, alpha = 0.7) +
+  geom_text(nudge_y = 0.015, check_overlap = TRUE, size = 3) +
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Mean genus relative abundance in 18S",
+       y = "Mean genus relative abundance in 28S",
+       title = "Mean genus abundance concordance between markers") +
+  theme_classic()
+
+#Across all genera: do genera abundant in 18S tend to be abundant in 28S? (descriptive only, there are few genera)
+cor.test(taxon_concordance$mean_rel_18S, taxon_concordance$mean_rel_28S,
+         method = "spearman", exact = FALSE)
+#data:  taxon_concordance$mean_rel_18S and taxon_concordance$mean_rel_28S
+#S = 148.73, p-value = 0.03327
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#      rho 
+#0.5913995 
+
+ggplot(main_pair$Genus, aes(x = rel_18S, y = rel_28S)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "lm", se = TRUE) +
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Genus relative abundance in 18S",
+       y = "Genus relative abundance in 28S",
+       title = "Pooled genus-level abundance concordance") +
+  theme_classic()
+
+#Family level fam_has = only samples where both markers resolved >= 1 family. Without this, a sample where 18S could not classify to family would count as "18S: zero".
+fam_has <- main_pair$Family |> filter(has)
+
+#including shared zeros (rewards agreeing on absence too)
+cor.test(fam_has$rel_18S, fam_has$rel_28S, method = "spearman", exact = FALSE)
+#data:  fam_has$rel_18S and fam_has$rel_28S
+#S = 71147750, p-value < 2.2e-16
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#      rho 
+#0.7001837 
+
+#only cells where BOTH markers detect the family: when both see it, do they agree on how much?
+shared_cells <- fam_has |> filter(rel_18S > 0, rel_28S > 0)
+nrow(shared_cells)
+#140
+cor.test(shared_cells$rel_18S, shared_cells$rel_28S,
+         method = "spearman", exact = FALSE)
+#data:  shared_cells$rel_18S and shared_cells$rel_28S
+#S = 101763, p-value < 2.2e-16
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#      rho 
+#0.7774755
+
+#per family: does a family's abundance track across samples, and which marker reports more? median_log2_28S_over_18S > 0 means 28S reports higher abundance when both detect it; 0 means equal.
+per_family <- fam_has |>
+  group_by(Family = taxon) |>
+  summarise(
+    n_either = sum(rel_18S > 0 | rel_28S > 0),
+    n_both   = sum(rel_18S > 0 & rel_28S > 0),
+    rho = if (n_either >= 5 && sd(rel_18S) > 0 && sd(rel_28S) > 0)
+      cor(rel_18S, rel_28S, method = "spearman") else NA_real_,
+    median_log2_28S_over_18S = median(log2(rel_28S[rel_18S > 0 & rel_28S > 0] /
+                                           rel_18S[rel_18S > 0 & rel_28S > 0])),
+    .groups = "drop"
+  ) |>
+  arrange(desc(n_either))
+per_family
+#   Family           n_either n_both     rho median_log2_28S_over_18S
+# 1 Diplogastridae          75     71  0.646                   0.0186
+# 2 Aphelenchoididae        48     19  0.576                  -1.53  
+# 3 Rhabditidae             46     27  0.454                   1.18  
+# 4 Diplogasteroidea        38      0 NA                      NA     
+# 5 Allantonematidae        25     21  0.933                  -1.70  
+# 6 Bunonematidae           15      2  0.340                  -1.84  
+# 7 Anguinidae               6      0 NA                      NA     
+# 8 Enoploidea               5      0 NA                      NA     
+# 9 Tylenchidae              5      0 NA                      NA     
+#10 Parasitylenchidae        3      0 NA                      NA     
+#11 Brevibuccidae            2      0 NA                      NA     
+#12 Meloidogynidae           2      0 NA                      NA     
+#13 Sphaerularioidea         2      0 NA                      NA     
+#14 Aphelenchidae            1      0 NA                      NA     
+#15 Pratylenchidae           1      0 NA                      NA  
+
+ggplot(shared_cells, aes(x = rel_18S, y = rel_28S, colour = taxon)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(linetype = 2) +
+  scale_x_sqrt(labels = scales::percent) +
+  scale_y_sqrt(labels = scales::percent) +
+  labs(x = "18S relative abundance (within nematodes)",
+       y = "28S relative abundance (within nematodes)",
+       colour = "Family",
+       title = "Shared detections, family level") +
+  theme_classic()
+
+#abundance relative to ALL reads = (nematode share) x (within-nematode share). If this correlation is weaker than (b), the difference comes from host vs nematode amplification differences between markers, not from community composition.
+cells_all <- shared_cells |>
+  left_join(depth |> select(sample_id, pct_18S, pct_28S), by = "sample_id") |>
+  mutate(all_18S = rel_18S * pct_18S / 100,
+         all_28S = rel_28S * pct_28S / 100)
+cor.test(cells_all$all_18S, cells_all$all_28S, method = "spearman", exact = FALSE)
+#data:  cells_all$all_18S and cells_all$all_28S
+#S = 129902, p-value < 2.2e-16
+#alternative hypothesis: true rho is not equal to 0
+#sample estimates:
+#      rho 
+#0.7159432
+```
+Taxonomic concordance: do the two markers identify the same nematode taxa?
+```R
+#Pooled across the analysed samples, one row per rank.
+tc_list <- list()
+for (rk in names(main_pair)) {
+  d   <- main_pair[[rk]]
+  det <- d |>
+    group_by(taxon) |>
+    summarise(d18 = any(rel_18S > 0), d28 = any(rel_28S > 0), .groups = "drop")
+  dh  <- d |> filter(has)
+  
+  tc_list[[rk]] <- tibble(
+    Rank       = rk,
+    n_samples  = n_distinct(dh$sample_id),
+    n_taxa_18S = sum(det$d18),
+    n_taxa_28S = sum(det$d28),
+    n_shared   = sum(det$d18 & det$d28),
+    n_union    = sum(det$d18 | det$d28),
+    jaccard    = n_shared / n_union,
+    prop_18S_in_28S = n_shared / n_taxa_18S,
+    prop_28S_in_18S = n_shared / n_taxa_28S,
+    kappa_presence  = if (n_distinct(dh$sample_id) > 1)
+      kappa2(cbind(as.integer(dh$rel_18S > 0), as.integer(dh$rel_28S > 0)))$value
+    else NA_real_
+  )
+}
+taxonomic_concordance <- bind_rows(tc_list)
+taxonomic_concordance
+#  Rank   n_samples n_taxa_18S n_taxa_28S n_shared n_union jaccard prop_18S_in_28S prop_28S_in_18S
+#1 Class         75          2          2        1       3   0.333           0.5             0.5  
+#2 Order         75          4          5        3       6   0.5             0.75            0.6  
+#3 Family        75         11          9        5      15   0.333           0.455           0.556
+#4 Genus         74          9         11        7      13   0.538           0.778           0.636
+#5 Speci…        60          5          5        1       9   0.111           0.2             0.2
+
+#Within each sample.
+per_sample_concordance <- bind_rows(main_ps)
+per_sample_summary <- per_sample_concordance |>
+  mutate(Rank = factor(Rank, RANKS)) |>
+  group_by(Rank) |>
+  summarise(n = n(),
+            median_jaccard = median(jaccard),
+            median_contain_18S_in_28S = median(contain_18S_in_28S),
+            .groups = "drop")
+per_sample_summary
+#  Rank        n median_jaccard median_contain_18S_in_28S
+#1 Class      75          1                         1    
+#2 Order      75          0.6                       0.667
+#3 Family     75           0.5                      0.5   
+#4 Genus      74          0.6                       0.633
+#5 Species    60          0.25                      0.5 
+
+#Genus detection frequency by marker (number of samples each marker detects it in)
+ggplot(taxon_concordance, aes(x = reorder(taxon, n_28S), y = n_28S)) +
+  geom_col(aes(fill = "28S")) +
+  geom_col(aes(y = n_18S, fill = "18S"), alpha = 0.7) +
+  coord_flip() +
+  scale_fill_manual(values = c("18S" = "steelblue", "28S" = "darkorange"),
+                    name = "Marker") +
+  labs(x = "Genus", y = "Number of samples detected",
+       title = "Genus detection frequency by marker") +
+  theme_classic()
+
+#Which genera are shared / marker-specific?
+genus_detect <- main_pair$Genus |>
+  group_by(taxon) |>
+  summarise(d18 = any(rel_18S > 0), d28 = any(rel_28S > 0), .groups = "drop")
+list(shared   = genus_detect$taxon[genus_detect$d18 & genus_detect$d28],
+     only_18S = genus_detect$taxon[genus_detect$d18 & !genus_detect$d28],
+     only_28S = genus_detect$taxon[!genus_detect$d18 & genus_detect$d28])
+
+#shared
+# "Bunonema"          "Bursaphelenchus"   "Contortylenchus"   "Cryptaphelenchus" 
+# "Diplogasteroides"  "Micoletzkya"       "Parasitorhabditis"
+
+#only_18S
+# "Ditylenchus"     "Parasitylenchus"
+
+#only_28S
+# "Cephalenchus"        "Devibursaphelenchus" "Malenchus"           "Meloidogyne"  
+```
+Detection sensitivity: how often does 18S see what 28S sees?
+```R
+#Take every sample x genus cell that 28S detects and ask whether 18S also detects it. Rhis includes samples where 18S could not classify to genus at all, which is a real limit of 18S rather than a missing sample.
+detection <- main_pair$Genus |>
+  filter(rel_28S > 0) |>
+  mutate(det_18S = rel_18S > 0)
+
+#By genus
+detection_by_taxon <- detection |>
+  group_by(taxon) |>
+  summarise(n_28S = n(),
+            prop_detected_18S = mean(det_18S),
+            median_rel_28S = median(rel_28S),
+            .groups = "drop") |>
+  arrange(desc(n_28S))
+detection_by_taxon
+#   taxon               n_28S prop_detected_18S median_rel_28S
+# 1 Micoletzkya            68             1           0.962   
+# 2 Diplogasteroides       49             0.939       0.0126  
+# 3 Contortylenchus        21             1           0.299   
+# 4 Parasitorhabditis      21             1           0.00111 
+# 5 Cryptaphelenchus       10             1           0.00339 
+# 6 Bursaphelenchus         8             1           0.000787
+# 7 Bunonema                2             1           0.000527
+# 8 Meloidogyne             2             0           0.0155  
+# 9 Cephalenchus            1             0           0.0912  
+#10 Devibursaphelenchus     1             0           0.431   
+#11 Malenchus               1             0           0.0190 
+
+#Bin how abundant the genus is in 28S. If 18S misses the genera 28S finds most abundant, the gap is more notable.
+detection_by_bin <- detection |>
+  mutate(bin = cut(rel_28S, c(0, .01, .05, .25, 1), include.lowest = TRUE)) |>
+  group_by(bin) |>
+  summarise(n = n(), prop_detected_18S = mean(det_18S), .groups = "drop")
+detection_by_bin
+#  bin             n prop_detected_18S
+#1 [0,0.01]       60             0.967
+#2 (0.01,0.05]    17             0.824
+#3 (0.05,0.25]    20             0.95 
+#4 (0.25,1]       87             0.977
+```
+Sample-level concordance: do the markers recover similar communities?
+```R
+#Bray-Curtis similarity per sample at genus and family level 
+similarity_summary <- bind_rows(main_ps$Genus, main_ps$Family) |>
+  group_by(Rank) |>
+  summarise(n_samples = n(),
+            median = median(bc_similarity, na.rm = TRUE),
+            mean   = mean(bc_similarity, na.rm = TRUE),
+            IQR    = IQR(bc_similarity, na.rm = TRUE),
+            .groups = "drop")
+print(similarity_summary)
+#  Rank   n_samples  median  mean    IQR
+#1 Family        75  0.947 0.791 0.411
+#2 Genus         74 0.897  0.772 0.401
+
+#Family-level distribution 
+fam_sim <- main_ps$Family |>
+  left_join(depth |> select(sample_id, group, nem_18S, nem_28S), by = "sample_id")
+summary(fam_sim$bc_similarity)
+#    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+#0.000718 0.579294 0.946732 0.791477 0.989931 1.000000   
+
+ggplot(bind_rows(main_ps$Genus, main_ps$Family), aes(x = bc_similarity)) +
+  geom_histogram(bins = 20) +
+  facet_wrap(~Rank) +
+  labs(x = "Bray-Curtis similarity between markers",
+       y = "Number of samples",
+       title = "18S-28S sample-level community concordance") +
+  theme_classic()
+
+#depth effect?
+ggplot(fam_sim, aes(x = pmin(nem_18S, nem_28S), y = bc_similarity, colour = group)) +
+  geom_point() +
+  scale_x_log10() +
+  labs(x = "Nematode reads (lower of the two markers)", y = "BC similarity (family)") +
+  theme_classic()
+
+#Mantel test: do the markers agree on which samples resemble each other? Builds a sample x taxon matrix per marker, turns each into a Bray-Curtis distance matrix between samples, and correlates the two distance matrices. A significant positive r means among-sample community structure is shared.
+mantel_list <- list()
+for (rk in c("Family", "Genus")) {
+  d <- main_pair[[rk]] |> filter(has)
+  if (n_distinct(d$sample_id) < 5) next                
+  M18 <- d |> select(sample_id, taxon, rel_18S) |>
+    pivot_wider(names_from = taxon, values_from = rel_18S) |>
+    column_to_rownames("sample_id") |> as.matrix()
+  M28 <- d |> select(sample_id, taxon, rel_28S) |>
+    pivot_wider(names_from = taxon, values_from = rel_28S) |>
+    column_to_rownames("sample_id") |> as.matrix()
+  m <- vegan::mantel(vegdist(M18, "bray"), vegdist(M28, "bray"),
+                     method = "spearman", permutations = 9999)
+  mantel_list[[rk]] <- tibble(Rank = rk, n = nrow(M18),
+                              mantel_r = m$statistic, mantel_p = m$signif)
+}
+mantel_tbl <- bind_rows(mantel_list)
+mantel_tbl
+#  Rank       n mantel_r mantel_p
+#1 Family    75    0.606   0.0001
+#2 Genus     74    0.556   0.0001
+
+#Similarity versus read depth
+depth_effect <- bind_rows(per_sample_all[[key_main]]$Genus,
+                          per_sample_all[[key_main]]$Family) |>
+  filter(!is.na(bc_similarity)) |>
+  left_join(depth |> select(sample_id, group, nem_18S, nem_28S), by = "sample_id") |>
+  mutate(min_reads = pmin(nem_18S, nem_28S))
+
+depth_effect |>
+  group_by(Rank) |>
+  summarise(n = n(),
+            rho = cor(min_reads, bc_similarity, method = "spearman"),
+            .groups = "drop")
+#  Rank       n   rho
+#1 Family    80 0.0272
+#2 Genus     80 0.0426
+
+ggplot(depth_effect, aes(x = min_reads, y = bc_similarity, colour = group)) +
+  geom_point() +
+  geom_vline(xintercept = MIN_READS, linetype = 2) +    # the depth gate
+  scale_x_log10() +
+  facet_wrap(~Rank) +
+  labs(x = "Nematode reads (lower of the two markers)",
+       y = "Bray-Curtis similarity between markers",
+       colour = "Group") +
+  theme_classic()
+```
+Sensitivity to low depth/abundance taxa
+```R
+MIN_READS_GRID <- sort(unique(c(0, 50, 100, 500, MIN_READS)))
+MIN_REL_GRID   <- sort(unique(c(0, 0.01, 0.05, MIN_REL)))
+
+sens_grid <- expand_grid(min_reads = MIN_READS_GRID, min_rel = MIN_REL_GRID)
+sens_rows <- list()
+
+for (i in seq_len(nrow(sens_grid))) {
+  mn  <- sens_grid$min_reads[i]
+  mr  <- sens_grid$min_rel[i]
+  key <- as.character(mr)
+  
+  ids_s <- depth |> filter(nem_18S >= mn, nem_28S >= mn) |> pull(sample_id)
+  
+  # family table for this setting, restricted like main_pair
+  fam_s <- pair_all[[key]]$Family |>
+    filter(sample_id %in% ids_s) |>
+    group_by(taxon) |>
+    filter(any(rel_18S > 0 | rel_28S > 0)) |>
+    ungroup()
+  fam_det <- fam_s |>
+    group_by(taxon) |>
+    summarise(d18 = any(rel_18S > 0), d28 = any(rel_28S > 0), .groups = "drop")
+  fam_h <- fam_s |> filter(has)
+  
+  ps_fam <- per_sample_all[[key]]$Family |> filter(sample_id %in% ids_s, has_both)
+  ps_gen <- per_sample_all[[key]]$Genus  |> filter(sample_id %in% ids_s, has_both)
+  
+  # Mantel (family) with fewer permutations, since it is run for every setting
+  mantel_fam <- NA_real_
+  if (n_distinct(fam_h$sample_id) >= 5) {
+    M18 <- fam_h |> select(sample_id, taxon, rel_18S) |>
+      pivot_wider(names_from = taxon, values_from = rel_18S) |>
+      column_to_rownames("sample_id") |> as.matrix()
+    M28 <- fam_h |> select(sample_id, taxon, rel_28S) |>
+      pivot_wider(names_from = taxon, values_from = rel_28S) |>
+      column_to_rownames("sample_id") |> as.matrix()
+    mantel_fam <- vegan::mantel(vegdist(M18, "bray"), vegdist(M28, "bray"),
+                                method = "spearman", permutations = 999)$statistic
+  }
+  
+  both <- fam_h$rel_18S > 0 & fam_h$rel_28S > 0
+  
+  sens_rows[[i]] <- tibble(
+    min_reads = mn, min_rel = mr,
+    n_samples = length(ids_s), n_paired_total = nrow(depth),
+    fam_prop_18S_in_28S = sum(fam_det$d18 & fam_det$d28) / sum(fam_det$d18),
+    fam_median_bc_sim   = median(ps_fam$bc_similarity),
+    gen_median_bc_sim   = median(ps_gen$bc_similarity),
+    mantel_family       = mantel_fam,
+    rho_all_cells       = cor(fam_h$rel_18S, fam_h$rel_28S, method = "spearman"),
+    rho_shared_cells    = cor(fam_h$rel_18S[both], fam_h$rel_28S[both], method = "spearman"),
+    n_shared_cells      = sum(both)
+  )
+}
+sens <- bind_rows(sens_rows)
+sens
+#   min_reads min_rel n_samples n_paired_total fam_prop_18S_in_28S fam_median_bc_sim gen_median_bc_sim mantel_family rho_all_cells rho_shared_cells n_shared_cells
+# 1         0    0           80             80               0.455             0.947             0.897         0.606         0.700            0.777            140
+# 2         0    0.01        80             80               0.5               0.950             0.899         0.606         0.770            0.626             94
+# 3         0    0.05        80             80               0.8               1                 0.898         0.610         0.864            0.641             86
+# 4        50    0           64             80               0.455             0.946             0.883         0.702         0.707            0.832            129
+# 5        50    0.01        64             80               0.571             0.949             0.887         0.695         0.806            0.640             85
+# 6        50    0.05        64             80               0.8               1                 0.887         0.713         0.904            0.615             78
+# 7       100    0           60             80               0.455             0.948             0.883         0.736         0.713            0.839            124
+# 8       100    0.01        60             80               0.571             0.949             0.887         0.730         0.811            0.655             80
+# 9       100    0.05        60             80               0.8               1                 0.887         0.737         0.910            0.608             74
+#10       500    0           54             80               0.455             0.955             0.897         0.739         0.721            0.841            116
+#11       500    0.01        54             80               0.8               0.952             0.899         0.732         0.831            0.651             73
+#12       500    0.05        54             80               0.75              1                 0.898         0.733         0.909            0.588             67 
+
+#Values barely move across rows, therefore they are robust to the filters. 
+```
+Export
+```R
+write_xlsx(list(
+  depth                  = depth,
+  resolution             = resolution,
+  taxonomic_concordance  = taxonomic_concordance,
+  per_sample_concordance = per_sample_concordance,
+  per_sample_summary     = per_sample_summary,
+  taxon_concordance      = taxon_concordance,
+  per_family             = per_family,
+  detection_by_taxon     = detection_by_taxon,
+  detection_by_bin       = detection_by_bin,
+  similarity_summary     = similarity_summary,
+  mantel                 = mantel_tbl,
+  sensitivity            = sens
+), "marker_concordance_18S_28S.xlsx")
+```
+### Diversity
+
+#### All
+Create phyloseq objects
+
+```R
+#28S
+meta <- sample_metadata |>
+  mutate(sample_key = str_to_lower(str_trim(sample_id)))
+
+df28S <- asv_28S_long |>
+  dplyr::select(sample_id, asv, count, tbl_tax_2_domain_kingdom, tbl_tax_2_phyla,
+                tbl_tax_2_class, tbl_tax_2_order, tbl_tax_2_family,
+                tbl_tax_2_genus, tbl_tax_2_species) |>
+  dplyr::rename(Kingdom = tbl_tax_2_domain_kingdom, Phylum = tbl_tax_2_phyla,
+                Class = tbl_tax_2_class, Order = tbl_tax_2_order,
+                Family = tbl_tax_2_family, Genus = tbl_tax_2_genus,
+                Species = tbl_tax_2_species) |>
+  mutate(across(c(Class, Order, Family, Genus, Species), ~ .x |> str_squish() |> na_if("") |> na_if("NA")))
+
+otu_wide <- df28S |> dplyr::group_by(sample_id, asv) |> dplyr::summarise(count = sum(count, na.rm = TRUE), .groups = "drop"
+  ) |> tidyr::pivot_wider(names_from = asv, values_from = count, values_fill = 0)
+
+otu <- as.matrix(otu_wide[, -1, drop = FALSE])
+rownames(otu) <- otu_wide$sample_id
+storage.mode(otu) <- "numeric"
+otu <- t(otu)
+
+meta_28 <- as.data.frame(meta)
+rownames(meta_28) <- meta_28$sample_key
+
+colnames(otu) <- str_to_lower(str_trim(colnames(otu)))
+
+common_samples <- intersect(colnames(otu), rownames(meta_28))
+
+otu <- otu[, common_samples, drop = FALSE]
+meta_28 <- meta_28[common_samples, , drop = FALSE]
+
+tax_split <- df28S |> dplyr::select(asv, Kingdom, Phylum, Class, Order, Family, Genus, Species) |> dplyr::distinct()
+
+if (anyDuplicated(tax_split$asv)) {
+  stop("Some 28S ASVs have conflicting taxonomy assignments.")
+}
+
+tax_split <- as.data.frame(tax_split)
+rownames(tax_split) <- tax_split$asv
+tax_split$asv <- NULL
+
+tax_split <- tax_split[rownames(otu), , drop = FALSE]
+
+OTU <- otu_table(otu, taxa_are_rows = TRUE)
+SAM <- sample_data(meta_28)
+TAX <- tax_table(as.matrix(tax_split))
+ps_28 <- phyloseq(OTU, SAM, TAX)
+ 
+ 
+#18S
+df18S <- asv_18S_long |>
+  dplyr::select(sample_id, asv, count, table8_domain_kingdom, table8_phylum,
+                table8_class, table8_order, table8_family, table8_genus,
+                table8_species) |>
+  dplyr::rename(Kingdom = table8_domain_kingdom, Phylum = table8_phylum,
+                Class = table8_class, Order = table8_order, Family = table8_family,
+                Genus = table8_genus, Species = table8_species) |>
+  mutate(across(c(Class, Order, Family, Genus, Species), ~ .x |> str_squish() |> na_if("") |> na_if("NA")))
+
+otu_wide <- df18S |> dplyr::group_by(sample_id, asv) |> dplyr::summarise(count = sum(count, na.rm = TRUE), .groups = "drop"
+  ) |> tidyr::pivot_wider(names_from = asv, values_from = count, values_fill = 0)
+
+otu <- as.matrix(otu_wide[, -1, drop = FALSE])
+rownames(otu) <- otu_wide$sample_id
+storage.mode(otu) <- "numeric"
+otu <- t(otu)
+
+meta_18 <- as.data.frame(meta)
+rownames(meta_18) <- meta_18$sample_key
+
+colnames(otu) <- str_to_lower(str_trim(colnames(otu)))
+
+common_samples <- intersect(colnames(otu), rownames(meta_18))
+
+otu <- otu[, common_samples, drop = FALSE]
+meta_18 <- meta_18[common_samples, , drop = FALSE]
+
+tax_split <- df18S |> dplyr::select(asv, Kingdom, Phylum, Class, Order, Family, Genus, Species) |> dplyr::distinct()
+
+if (anyDuplicated(tax_split$asv)) {
+  stop("Some 18S ASVs have conflicting taxonomy assignments.")
+}
+
+tax_split <- as.data.frame(tax_split)
+rownames(tax_split) <- tax_split$asv
+tax_split$asv <- NULL
+
+tax_split <- tax_split[rownames(otu), , drop = FALSE]
+
+OTU <- otu_table(otu, taxa_are_rows = TRUE)
+SAM <- sample_data(meta_18)
+TAX <- tax_table(as.matrix(tax_split))
+ps_18 <- phyloseq(OTU, SAM, TAX)
+```
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson", "Chao1", "Observed"))
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta_28
+ps_f <- prune_samples(rownames(meta_f), ps_28)
+
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = group, y = Shannon, fill = group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = group),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 80, hjust = 1),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#### innichen only
+meta_f <- meta_28[meta_28$location == "Innichen", ]
+ps_f <- prune_samples(rownames(meta_f), ps_28)
+
+alpha_df <- get_alpha(ps_f, meta_f)
+
+alpha_df <- alpha_df %>%
+  mutate(yr = as.factor(yr))
+  
+ggplot(alpha_df, aes(x = yr, y = Shannon, fill = yr)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = group),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 80, hjust = 1),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+```
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = group, shape = region)) +
+  geom_point(size = 3) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3.5,
+    show.legend = FALSE,
+    max.overlaps = Inf
+  ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = yr, shape = location)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#### innichen only
+pcoa_df <- pcoa_df %>%
+  mutate(yr = as.factor(yr))
+
+ggplot(pcoa_df, aes(PC1, PC2, color = group, shape = yr)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+```
+```R
+meta_f <- meta_18
+ps_f <- prune_samples(rownames(meta_f), ps_18)
+
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = group, y = Shannon, fill = group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = group),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 80, hjust = 1),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+```
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = group, shape = region)) +
+  geom_point(size = 3) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3.5,
+    show.legend = FALSE,
+    max.overlaps = Inf
+  ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+```
+#### Nematoda
+Create phyloseq objects
+```R
+ps_18_nematoda <- subset_taxa(
+  ps_18,
+  Phylum == "Nematoda"
+)
+
+ps_28_nematoda <- subset_taxa(
+  ps_28,
+  Phylum == "Nematoda"
+)
+```
+```R
+get_alpha <- function(ps_obj, meta_obj) {
+  alpha <- estimate_richness(ps_obj,
+                             measures = c("Shannon", "Simpson", "Chao1", "Observed"))
+  rownames(alpha) <- gsub("\\.", "-", rownames(alpha))
+  alpha$Sample <- rownames(alpha)
+  meta_obj$Sample <- rownames(meta_obj)
+  df <- merge(alpha, meta_obj, by = "Sample")
+  return(df)
+}
+
+meta_f <- meta_28
+ps_f <- prune_samples(rownames(meta_f), ps_28_nematoda)
+ps_f <- prune_samples(sample_sums(ps_f) > 0, ps_f)
+
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = group, y = Shannon, fill = group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = group),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 80, hjust = 1),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+
+#### innichen only
+meta_f <- meta_28[meta_28$location == "Innichen", ]
+ps_f <- prune_samples(rownames(meta_f), ps_28_nematoda)
+ps_f <- prune_samples(sample_sums(ps_f) > 0, ps_f)
+
+alpha_df <- get_alpha(ps_f, meta_f)
+
+alpha_df <- alpha_df %>%
+  mutate(yr = as.factor(yr))
+  
+ggplot(alpha_df, aes(x = yr, y = Shannon, fill = yr)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = group),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 80, hjust = 1),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+```
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = group, shape = region)) +
+  geom_point(size = 3) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3.5,
+    show.legend = FALSE,
+    max.overlaps = Inf
+  ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+ggplot(pcoa_df, aes(PC1, PC2, color = group, shape = region)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+
+#### innichen only
+pcoa_df <- pcoa_df %>%
+  mutate(yr = as.factor(yr))
+
+ggplot(pcoa_df, aes(PC1, PC2, color = group, shape = yr)) +
+  geom_point(size = 3) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+```
+```R
+meta_f <- meta_18
+ps_f <- prune_samples(rownames(meta_f), ps_18_nematoda)
+ps_f <- prune_samples(sample_sums(ps_f) > 0, ps_f)
+
+alpha_df <- get_alpha(ps_f, meta_f)
+
+ggplot(alpha_df, aes(x = group, y = Shannon, fill = group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.3, width = 0.6) +
+  geom_jitter(aes(color = group),
+              width = 0.15,
+              alpha = 0.7,
+              size = 2) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 80, hjust = 1),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16)
+  ) +
+  guides(color = "none")
+```
+```R
+bray <- phyloseq::distance(ps_f, method = "bray")
+ord <- ordinate(ps_f, method = "PCoA", distance = bray)
+pcoa_df <- as.data.frame(ord$vectors[, 1:2])
+colnames(pcoa_df) <- c("PC1", "PC2")
+pcoa_df$Sample <- rownames(pcoa_df)
+meta_f$Sample <- rownames(meta_f)
+pcoa_df <- merge(pcoa_df, meta_f, by = "Sample")
+
+ggplot(pcoa_df, aes(PC1, PC2, color = group, shape = region)) +
+  geom_point(size = 3) +
+  geom_text_repel(
+    aes(label = Sample),
+    size = 3.5,
+    show.legend = FALSE,
+    max.overlaps = Inf
+  ) +
+  theme_classic() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
+    strip.text = element_text(size = 16, face = "bold")
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Create phyloseq objects
+```R
+#28S
+otu_28S <- nem_28S |>
+  group_by(sample_id, asv) |>
+  summarise(count = sum(count, na.rm = TRUE), .groups = "drop") |>
+  pivot_wider(
+    names_from = asv,
+    values_from = count,
+    values_fill = 0
+  )
+
+otu_mat_28S <- as.matrix(otu_28S[, -1, drop = FALSE])
+rownames(otu_mat_28S) <- otu_28S$sample_id
+storage.mode(otu_mat_28S) <- "numeric"
+
+tax_28S <- nem_28S |>
+  dplyr::select(asv, Kingdom, Phylum, Class, Order, Family, Genus, Species) |>
+  distinct()
+
+if (anyDuplicated(tax_28S$asv)) {
+  stop("Some 28S ASVs have conflicting taxonomy assignments.")
+}
+
+tax_mat_28S <- as.matrix(tax_28S[, -1, drop = FALSE])
+rownames(tax_mat_28S) <- tax_28S$asv
+
+ps_28S <- phyloseq(
+  otu_table(otu_mat_28S, taxa_are_rows = FALSE),
+  tax_table(tax_mat_28S)
+)
+
+
+#18S
+otu_18S <- nem_18S |>
+  group_by(sample_id, asv) |>
+  summarise(count = sum(count, na.rm = TRUE), .groups = "drop") |>
+  pivot_wider(
+    names_from = asv,
+    values_from = count,
+    values_fill = 0
+  )
+
+otu_mat_18S <- as.matrix(otu_18S[, -1, drop = FALSE])
+rownames(otu_mat_18S) <- otu_18S$sample_id
+storage.mode(otu_mat_18S) <- "numeric"
+
+tax_18S <- nem_18S |>
+  dplyr::select(asv, Kingdom, Phylum, Class, Order, Family, Genus, Species) |>
+  distinct()
+
+if (anyDuplicated(tax_18S$asv)) {
+  stop("Some 18S ASVs have conflicting taxonomy assignments.")
+}
+
+tax_mat_18S <- as.matrix(tax_18S[, -1, drop = FALSE])
+rownames(tax_mat_18S) <- tax_18S$asv
+
+ps_18S <- phyloseq(
+  otu_table(otu_mat_18S, taxa_are_rows = FALSE),
+  tax_table(tax_mat_18S)
+)
+```
+
+
+1. Pairwise presence/absence models with the event as a random effect. This is the most transparent test, for a few biologically motivated pairs (phoretic × phoretic, parasite × parasite, M. buetschlii × each parasite):
+```r
+   library(glmmTMB)
+   # pa: beetle x taxon 0/1 (presence = reads >= your minimum, e.g. >=10 reads AND >=0.1%)
+   # d: one row per beetle with sample_id, group (event), nem_reads, and pa columns
+   fit_pair <- function(y, x) {
+     f <- as.formula(paste(y, "~", x, "+ log(nem_reads) + (1|group)"))
+     m <- glmmTMB(f, data = d, family = binomial)
+     broom.mixed::tidy(m, effects = "fixed") |> filter(term == x)
+   }
+   pairs <- tribble(~y, ~x,
+     "Contortylenchus", "Micoletzkya_buetschlii",
+     "Parasitorhabditis_obtusa", "Micoletzkya_buetschlii",
+     "Contortylenchus", "Parasitorhabditis_obtusa",
+     "Diplogasteroides_halleri", "Micoletzkya_buetschlii")
+   pmap_dfr(pairs, fit_pair, .id = "pair") |> mutate(p_adj = p.adjust(p.value, "holm"))
+```
+
+A significant negative coefficient means the taxa segregate beyond what event and depth explain. Compositional dependence is much weaker with presence/absence, though depth-dependent detection remains, hence the depth term.
+
+2. A joint species distribution model (HMSC or ecoCopula). These estimate a residual association matrix between species after accounting for covariates (event, depth, altitude) and are the closest equivalent to your network, built for ~10 species and ~200 sites. For HMSC, use presence/absence with a probit model, event as a random effect, and log(nem_reads) as a covariate.
+3. A stratified null-model test. Run vegan::oecosimu (C-score, curveball) separately within each sampling event, or permute within events, to test whether the overall pattern is more segregated than chance.
+
+
+```R
+# drop list from the rule, not by hand
+drop_rule <- reads |> filter(prop_nem < 1e-4) |> pull(sample_id)
+stopifnot(length(drop_rule) == 18)          # report says 18
+setdiff(drop_rule, read_xlsx(veg, "samples_to_drop")$sample_id)  # -> "RV141"
+
+meta <- meta |> left_join(reads, by = "sample_id") |>
+  mutate(keep = !sample_id %in% drop_rule)
+
+blast_long <- read_xlsx(nri, "28S") |>
+  mutate(tax = clean_tax(species), family = str_squish(family)) |>
+  select(sample_id, tax, counts, total_nematode_reads)
+
+blast_counts <- blast_long |> select(sample_id, tax, counts) |>
+  pivot_wider(names_from = tax, values_from = counts, values_fill = 0) |>
+  column_to_rownames("sample_id")
+
+# Full multi-classifier comparison (wide), if you want to re-derive concordance stats:
+merged_28S_wide  <- read_xlsx(path, sheet = "merged_ASV_classifications_28S",
+                               skip = 1, na = c("", "NA")) |> clean_names()
+```
+Build a clean, analysis-ready table
+```R
+# Long table: one row per Sample x ASV, with manual taxonomy attached, nematodes only
+nem_28S <- asv_28S_long |>
+  filter(domain_kingdom == "metazoa", phyla == "Nematoda") |>   # adjust col names after clean_names()
+  select(sample, asv, count, genus, species, justification)
+
+# Parse sample names into Location / Year / Month using the same logic as your BLAST pipeline
+# e.g. "28S_D2A_RV065" -> alpine run; "28S_Ab1_1" -> Abetone
+# Best practice: build an explicit sample metadata table (one row per sample) with
+# Location, Country, Year, Month, Altitude — matching Table 1 of the PDF — and join it in,
+# rather than parsing strings inline every time.
+sample_metadata <- read_xlsx("sample_metadata.xlsx")   # you'll need to create/export this once
+
+nem_28S <- nem_28S |> left_join(sample_metadata, by = "sample")
+```
+From long counts to a community matrix (for vegan/PERMANOVA/NMDS)
+
+Concordance checks (ASV pipeline vs BLAST/BASTA report pipeline)
+
+```R
+ids <- meta |> filter(keep) |> pull(sample_id)
+align <- function(m, ids, cols) { m <- m[ids, , drop = FALSE]
+  miss <- setdiff(cols, colnames(m)); m[miss] <- 0; m[, cols, drop = FALSE] }
+cols <- union(colnames(asv_genus), colnames(blast_genus))
+A <- align(asv_genus,   ids, cols) |> relab(thr = 0.01)   # same filter on both
+B <- align(blast_genus, ids, cols) |> relab(thr = 0.01)
+
+# presence/absence agreement and abundance correlation, per core genus
+core <- c("Micoletzkya","Diplogasteroides","Contortylenchus","Parasitorhabditis")
+map_dfr(core, \(g) tibble(genus = g,
+  kappa = kappa2(cbind(A[, g] > 0, B[, g] > 0))$value,
+  rho   = cor(A[, g], B[, g], method = "spearman", use = "complete.obs")))
+
+# community-level
+ok <- complete.cases(A, B)
+dA <- vegdist(A[ok, ], "bray"); dB <- vegdist(B[ok, ], "bray")
+mantel(dA, dB, permutations = 9999)
+protest(metaMDS(A[ok, ], "bray", k = 2, trymax = 200),
+        metaMDS(B[ok, ], "bray", k = 2, trymax = 200), permutations = 9999)
+
+# same model on both pipelines, side by side
+md <- meta |> filter(sample_id %in% ids[ok])
+perm <- \(d) adonis2(d ~ group, data = md, permutations = 9999, by = "margin")
+list(ASV = perm(dA), BLAST = perm(dB))
+````
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Other 
 
 Classify ASVs with Kraken2 ?
